@@ -53,7 +53,7 @@
     </Image>
   </ItemGroup>
   <ItemGroup>
-    <FxCompile Include="VertexShader.hlsl" />
-    <FxCompile Include="PixelShader.hlsl" />
+    <CopyFileToFolders Include="PixelShader.hlsl" />
+    <CopyFileToFolders Include="VertexShader.hlsl" />
   </ItemGroup>
 </Project>

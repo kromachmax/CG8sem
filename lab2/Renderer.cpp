@@ -130,17 +130,17 @@ void Renderer::InitDebugLayer()
         {
             infoQueue->SetMuteDebugOutput(FALSE);
 
+
             D3D11_MESSAGE_SEVERITY severities[] = {
-                D3D11_MESSAGE_SEVERITY_CORRUPTION, 
-                D3D11_MESSAGE_SEVERITY_ERROR,    
-                D3D11_MESSAGE_SEVERITY_WARNING,    
-                D3D11_MESSAGE_SEVERITY_INFO 
+                D3D11_MESSAGE_SEVERITY_CORRUPTION,
+                D3D11_MESSAGE_SEVERITY_ERROR,
+                D3D11_MESSAGE_SEVERITY_WARNING
             };
 
             D3D11_INFO_QUEUE_FILTER filter = {};
-
-            filter.AllowList.NumSeverities = 4;
+            filter.AllowList.NumSeverities = 3;
             filter.AllowList.pSeverityList = severities;
+
             infoQueue->PushStorageFilter(&filter);
 
             infoQueue->Release();
@@ -151,11 +151,70 @@ void Renderer::InitDebugLayer()
 }
 
 void Renderer::CleanupDevice()
-{ 
-    m_pBackBufferRTV->Release();
-    m_pSwapChain->Release();
-    m_pDeviceContext->Release();
-    m_pDevice->Release();
+{
+    if (m_pDeviceContext)
+    {
+        m_pDeviceContext->Release();
+        m_pDeviceContext = nullptr;
+    }
+
+    if (m_pVertexBuffer)
+    {
+        m_pVertexBuffer->Release();
+        m_pVertexBuffer = nullptr;
+    }
+
+    if (m_pIndexBuffer)
+    {
+        m_pIndexBuffer->Release();
+        m_pIndexBuffer = nullptr;
+    }
+
+    if (m_pBackBufferRTV)
+    {
+        m_pBackBufferRTV->Release();
+        m_pBackBufferRTV = nullptr;
+    }
+
+    if (m_pSwapChain)
+    {
+        m_pSwapChain->Release();
+        m_pSwapChain = nullptr;
+    }
+
+    if (m_pVertexShader)
+    {
+        m_pVertexShader->Release();
+        m_pVertexShader = nullptr;
+    }
+
+    if (m_pPixelShader)
+    {
+        m_pPixelShader->Release();
+        m_pPixelShader = nullptr;
+    }
+
+    if (m_pInputLayout)
+    {
+        m_pInputLayout->Release();
+        m_pInputLayout = nullptr;
+    }
+
+    if (m_pDevice)
+    {
+        ID3D11Debug* debugDevice = nullptr;
+        HRESULT hr = m_pDevice->QueryInterface(__uuidof(ID3D11Debug), (void**)&debugDevice);
+
+        if (SUCCEEDED(hr) && debugDevice)
+        {
+            debugDevice->ReportLiveDeviceObjects(D3D11_RLDO_DETAIL);
+            debugDevice->Release();
+        }
+
+        m_pDevice->Release();
+        m_pDevice = nullptr;
+    }
+
 }
 
 bool Renderer::Render()
@@ -168,7 +227,7 @@ bool Renderer::Render()
     static const FLOAT BackColor[4] = { 0.0f, 0.0f, 0.25f, 1.0f };
     m_pDeviceContext->ClearRenderTargetView(m_pBackBufferRTV, BackColor);
 
-    D3D11_VIEWPORT viewport;
+    D3D11_VIEWPORT viewport{};
     viewport.TopLeftX = 0;
     viewport.TopLeftY = 0;
     viewport.Width = (FLOAT)m_width;
@@ -177,7 +236,7 @@ bool Renderer::Render()
     viewport.MaxDepth = 1.0f;
     m_pDeviceContext->RSSetViewports(1, &viewport);
 
-    D3D11_RECT rect;
+    D3D11_RECT rect{};
     rect.left = 0;
     rect.top = 0;
     rect.right = m_width;
