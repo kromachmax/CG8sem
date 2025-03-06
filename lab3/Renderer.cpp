@@ -223,12 +223,6 @@ void Renderer::CleanupDevice()
         m_pSceneBuffer = nullptr;
     }
 
-    if (m_pRasterizerState)
-    {
-        m_pRasterizerState->Release();
-        m_pRasterizerState = nullptr;
-    }
-
 #ifdef _DEBUG
     if (m_pDevice != nullptr)
     {
@@ -285,8 +279,6 @@ bool Renderer::Render()
     rect.right = m_width;
     rect.bottom = m_height;
     m_pDeviceContext->RSSetScissorRects(1, &rect);
-
-    m_pDeviceContext->RSSetState(m_pRasterizerState);
 
     m_pDeviceContext->IASetIndexBuffer(m_pIndexBuffer, DXGI_FORMAT_R16_UINT, 0);
 
@@ -430,23 +422,34 @@ HRESULT Renderer::InitScene()
     HRESULT result;
 
     static const Vertex Vertices[] = {
-    {-0.5f, -0.5f, -0.5f, RGB(255, 0, 0)},     // 0:  расный (передн€€ нижн€€ лева€)
-    { 0.5f, -0.5f, -0.5f, RGB(0, 255, 0)},     // 1: «еленый (передн€€ нижн€€ права€)
-    { 0.5f,  0.5f, -0.5f, RGB(0, 0, 255)},     // 2: —иний (передн€€ верхн€€ права€)
-    {-0.5f,  0.5f, -0.5f, RGB(255, 255, 0)},   // 3: ∆елтый (передн€€ верхн€€ лева€)
-    {-0.5f, -0.5f,  0.5f, RGB(0, 255, 255)},   // 4: √олубой (задн€€ нижн€€ лева€)
-    { 0.5f, -0.5f,  0.5f, RGB(255, 0, 255)},   // 5: ѕурпурный (задн€€ нижн€€ права€)
-    { 0.5f,  0.5f,  0.5f, RGB(255, 255, 255)}, // 6: Ѕелый (задн€€ верхн€€ права€)
-    {-0.5f,  0.5f,  0.5f, RGB(0, 0, 0)}        // 7: „ерный (задн€€ верхн€€ лева€)
+    {-0.5f, -0.5f, -0.5f, RGB(255, 0, 0)    },
+    { 0.5f, -0.5f, -0.5f, RGB(0, 255, 0)    },
+    { 0.5f,  0.5f, -0.5f, RGB(0, 0, 255)    },  
+    {-0.5f,  0.5f, -0.5f, RGB(255, 255, 0)  },   
+    {-0.5f, -0.5f,  0.5f, RGB(0, 255, 255)  }, 
+    { 0.5f, -0.5f,  0.5f, RGB(255, 0, 255)  },  
+    { 0.5f,  0.5f,  0.5f, RGB(255, 255, 255)}, 
+    {-0.5f,  0.5f,  0.5f, RGB(0, 0, 0)      }        
     };
 
     static const USHORT Indices[] = {
-        0, 1, 2,   0, 2, 3,
-        5, 4, 7,   5, 7, 6,
-        4, 0, 3,   4, 3, 7,
-        1, 5, 6,   1, 6, 2,
-        3, 2, 6,   3, 6, 7,
-        4, 5, 1,   4, 1, 0
+        3,1,0,
+        2,1,3,
+
+        0,5,4,
+        1,5,0,
+
+        3,4,7,
+        0,4,3,
+
+        1,6,5,
+        2,6,1,
+
+        2,7,6,
+        3,7,2,
+
+        6,4,5,
+        7,4,6,
     };
 
     static const D3D11_INPUT_ELEMENT_DESC InputDesc[] = {
@@ -561,12 +564,12 @@ HRESULT Renderer::InitScene()
         {
             std::string name = "Geombuffer";
 
-            result = m_pInputLayout->SetPrivateData(WKPDID_D3DDebugObjectName,
+            result = m_pGeomBuffer->SetPrivateData(WKPDID_D3DDebugObjectName,
                 (UINT)name.length(), name.c_str());
         }
     }
 
-    // Create scene buffer
+
     if (SUCCEEDED(result))
     {
         D3D11_BUFFER_DESC desc = {};
@@ -585,33 +588,7 @@ HRESULT Renderer::InitScene()
         {
             std::string name = "SceneBuffer";
 
-            result = m_pInputLayout->SetPrivateData(WKPDID_D3DDebugObjectName,
-                (UINT)name.length(), name.c_str());
-        }
-    }
-
-    if (SUCCEEDED(result))
-    {
-        D3D11_RASTERIZER_DESC desc = {};
-        desc.AntialiasedLineEnable = FALSE;
-        desc.FillMode = D3D11_FILL_SOLID;
-        desc.CullMode = D3D11_CULL_BACK;
-        desc.FrontCounterClockwise = FALSE;
-        desc.DepthBias = 0;
-        desc.SlopeScaledDepthBias = 0.0f;
-        desc.DepthBiasClamp = 0.0f;
-        desc.DepthClipEnable = TRUE;
-        desc.ScissorEnable = FALSE;
-        desc.MultisampleEnable = FALSE;
-
-        result = m_pDevice->CreateRasterizerState(&desc, &m_pRasterizerState);
-        assert(SUCCEEDED(result));
-
-        if (SUCCEEDED(result))
-        {
-            std::string name = "RasterizerState";
-
-            result = m_pInputLayout->SetPrivateData(WKPDID_D3DDebugObjectName,
+            result = m_pSceneBuffer->SetPrivateData(WKPDID_D3DDebugObjectName,
                 (UINT)name.length(), name.c_str());
         }
     }

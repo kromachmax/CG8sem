@@ -70,11 +70,9 @@ public:
         , m_pIndexBuffer(nullptr)
         , m_pGeomBuffer(nullptr)
         , m_pSceneBuffer(nullptr)
-        , m_pRasterizerState(nullptr)
         , m_prevUSec(0)
         , m_rotateModel(true)
         , m_angle(0.0)
-        , m_camera()
     {
     }
 
@@ -119,7 +117,5 @@ private:
     ID3D11PixelShader* m_pPixelShader;
     ID3D11VertexShader* m_pVertexShader;
     ID3D11InputLayout* m_pInputLayout;
-
-    ID3D11RasterizerState* m_pRasterizerState;
 };
 
