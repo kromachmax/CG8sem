@@ -2,6 +2,9 @@
 #include "framework.h"
 #include "Renderer.h"
 
+static const float CameraRotationSpeed = (float)M_PI * 2.0f;
+static const float ModelRotationSpeed = (float)M_PI / 2.0f;
+
 bool Renderer::InitDevice(HWND hWnd)
 {
     HRESULT result;
@@ -105,6 +108,14 @@ bool Renderer::InitDevice(HWND hWnd)
         result = InitScene();
     }
 
+    if (SUCCEEDED(result))
+    {
+        m_camera.poi = Point{ 0,0,0 };
+        m_camera.r = 5.0f;
+        m_camera.phi = -(float)M_PI / 4;
+        m_camera.theta = (float)M_PI / 4;
+    }
+
     pSelectedAdapter->Release();
     pFactory->Release();
 
@@ -200,17 +211,49 @@ void Renderer::CleanupDevice()
         m_pInputLayout = nullptr;
     }
 
+    if (m_pGeomBuffer)
+    {
+        m_pGeomBuffer->Release();
+        m_pGeomBuffer = nullptr;
+    }
+
+    if (m_pSceneBuffer)
+    {
+        m_pSceneBuffer->Release();
+        m_pSceneBuffer = nullptr;
+    }
+
+    if (m_pRasterizerState)
+    {
+        m_pRasterizerState->Release();
+        m_pRasterizerState = nullptr;
+    }
+
+#ifdef _DEBUG
+    if (m_pDevice != nullptr)
+    {
+        ID3D11Debug* pDebug = nullptr;
+        HRESULT result      = m_pDevice->QueryInterface(__uuidof(ID3D11Debug), (void**)&pDebug);
+        assert(SUCCEEDED(result));
+
+        if (pDebug != nullptr)
+        {
+            ULONG deviceRefCount = m_pDevice->AddRef();
+
+            m_pDevice->Release();
+
+            if (deviceRefCount != 3)
+            {
+                pDebug->ReportLiveDeviceObjects(D3D11_RLDO_DETAIL | D3D11_RLDO_IGNORE_INTERNAL);
+            }
+
+            pDebug->Release();
+        }
+    }
+#endif
+
     if (m_pDevice)
     {
-        ID3D11Debug* debugDevice = nullptr;
-        HRESULT hr = m_pDevice->QueryInterface(__uuidof(ID3D11Debug), (void**)&debugDevice);
-
-        if (SUCCEEDED(hr) && debugDevice)
-        {
-            debugDevice->ReportLiveDeviceObjects(D3D11_RLDO_DETAIL);
-            debugDevice->Release();
-        }
-
         m_pDevice->Release();
         m_pDevice = nullptr;
     }
@@ -243,23 +286,97 @@ bool Renderer::Render()
     rect.bottom = m_height;
     m_pDeviceContext->RSSetScissorRects(1, &rect);
 
+    m_pDeviceContext->RSSetState(m_pRasterizerState);
+
     m_pDeviceContext->IASetIndexBuffer(m_pIndexBuffer, DXGI_FORMAT_R16_UINT, 0);
 
     ID3D11Buffer* vertexBuffers[] = { m_pVertexBuffer };
     UINT strides[] = { 16 };
     UINT offsets[] = { 0 };
 
+    ID3D11Buffer* cbuffers[] = { m_pSceneBuffer, m_pGeomBuffer };
+
     m_pDeviceContext->IASetVertexBuffers(0, 1, vertexBuffers, strides, offsets);
+    m_pDeviceContext->VSSetConstantBuffers(0, 2, cbuffers);
     m_pDeviceContext->IASetInputLayout(m_pInputLayout);
     m_pDeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
     m_pDeviceContext->VSSetShader(m_pVertexShader, nullptr, 0);
     m_pDeviceContext->PSSetShader(m_pPixelShader, nullptr, 0);
-    m_pDeviceContext->DrawIndexed(3, 0, 0);
+    m_pDeviceContext->DrawIndexed(36, 0, 0);
 
 
 
     HRESULT result = m_pSwapChain->Present(0, 0);
     assert(SUCCEEDED(result));
+
+    return SUCCEEDED(result);
+
+}
+
+bool Renderer::Update()
+{
+    size_t usec = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
+
+    if (m_prevUSec == 0)
+    {
+        m_prevUSec = usec;
+    }
+
+    if (m_rotateModel)
+    {
+        double deltaSec = (usec - m_prevUSec) / 1000000.0;
+        m_angle         = m_angle + deltaSec * ModelRotationSpeed;
+
+        GeomBuffer geomBuffer;
+
+        DirectX::XMMATRIX m = DirectX::XMMatrixRotationAxis(DirectX::XMVectorSet(0.0f, 1.0f, 0.0f, 1.0f), -(float)m_angle);
+
+        geomBuffer.m = m;
+
+        m_pDeviceContext->UpdateSubresource(m_pGeomBuffer, 0, nullptr, &geomBuffer, 0, 0);
+    }
+
+    m_prevUSec = usec;
+
+
+    DirectX::XMMATRIX v;
+    {
+        float posX = m_camera.poi.x + cosf(m_camera.theta) * cosf(m_camera.phi) * m_camera.r;
+        float posY = m_camera.poi.y + sinf(m_camera.theta) * m_camera.r;
+        float posZ = m_camera.poi.z + cosf(m_camera.theta) * sinf(m_camera.phi) * m_camera.r;
+
+        float upTheta = m_camera.theta + (float)M_PI / 2;
+
+        float upX = cosf(upTheta) * cosf(m_camera.phi);
+        float upY = sinf(upTheta);
+        float upZ = cosf(upTheta) * sinf(m_camera.phi);
+
+        v = DirectX::XMMatrixLookAtLH(
+            DirectX::XMVectorSet(posX, posY, posZ, 0.0f),
+            DirectX::XMVectorSet(m_camera.poi.x, m_camera.poi.y, m_camera.poi.z, 0.0f),
+            DirectX::XMVectorSet(upX, upY, upZ, 0.0f)
+        );
+    }
+
+    float f             = 100.0f;
+    float n             = 0.1f;
+    float fov           = (float)M_PI / 3;
+    float c             = 1.0f / tanf(fov / 2);
+    float aspectRatio   = (float)m_height / m_width;
+    DirectX::XMMATRIX p = DirectX::XMMatrixPerspectiveLH(tanf(fov / 2) * 2 * n, tanf(fov / 2) * 2 * n * aspectRatio, n, f);
+
+    D3D11_MAPPED_SUBRESOURCE subresource;
+    HRESULT result = m_pDeviceContext->Map(m_pSceneBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &subresource);
+    assert(SUCCEEDED(result));
+
+    if (SUCCEEDED(result))
+    {
+        SceneBuffer& sceneBuffer = *reinterpret_cast<SceneBuffer*>(subresource.pData);
+
+        sceneBuffer.vp = DirectX::XMMatrixMultiply(v, p);
+
+        m_pDeviceContext->Unmap(m_pSceneBuffer, 0);
+    }
 
     return SUCCEEDED(result);
 }
@@ -313,12 +430,24 @@ HRESULT Renderer::InitScene()
     HRESULT result;
 
     static const Vertex Vertices[] = {
-        {-0.5f, -0.5f, 0.0f, RGB(255, 0, 0)},
-        {0.5f, -0.5f, 0.0f, RGB(0, 255, 0)},
-        {0.0f, 0.5f, 0.0f, RGB(0, 0, 255)}
+    {-0.5f, -0.5f, -0.5f, RGB(255, 0, 0)},     // 0:  расный (передн€€ нижн€€ лева€)
+    { 0.5f, -0.5f, -0.5f, RGB(0, 255, 0)},     // 1: «еленый (передн€€ нижн€€ права€)
+    { 0.5f,  0.5f, -0.5f, RGB(0, 0, 255)},     // 2: —иний (передн€€ верхн€€ права€)
+    {-0.5f,  0.5f, -0.5f, RGB(255, 255, 0)},   // 3: ∆елтый (передн€€ верхн€€ лева€)
+    {-0.5f, -0.5f,  0.5f, RGB(0, 255, 255)},   // 4: √олубой (задн€€ нижн€€ лева€)
+    { 0.5f, -0.5f,  0.5f, RGB(255, 0, 255)},   // 5: ѕурпурный (задн€€ нижн€€ права€)
+    { 0.5f,  0.5f,  0.5f, RGB(255, 255, 255)}, // 6: Ѕелый (задн€€ верхн€€ права€)
+    {-0.5f,  0.5f,  0.5f, RGB(0, 0, 0)}        // 7: „ерный (задн€€ верхн€€ лева€)
     };
 
-    static const USHORT Indices[] = { 0, 2, 1 };
+    static const USHORT Indices[] = {
+        0, 1, 2,   0, 2, 3,
+        5, 4, 7,   5, 7, 6,
+        4, 0, 3,   4, 3, 7,
+        1, 5, 6,   1, 6, 2,
+        3, 2, 6,   3, 6, 7,
+        4, 5, 1,   4, 1, 0
+    };
 
     static const D3D11_INPUT_ELEMENT_DESC InputDesc[] = {
        {"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
@@ -404,6 +533,88 @@ HRESULT Renderer::InitScene()
     }
 
     pVertexShaderCode->Release();
+
+
+    if (SUCCEEDED(result))
+    {
+        D3D11_BUFFER_DESC desc = {};
+
+        desc.ByteWidth           = sizeof(GeomBuffer);
+        desc.Usage               = D3D11_USAGE_DEFAULT;
+        desc.BindFlags           = D3D11_BIND_CONSTANT_BUFFER;
+        desc.CPUAccessFlags      = 0;
+        desc.MiscFlags           = 0;
+        desc.StructureByteStride = 0;
+
+        GeomBuffer geomBuffer;
+        geomBuffer.m = DirectX::XMMatrixIdentity();
+
+        D3D11_SUBRESOURCE_DATA data;
+        data.pSysMem            = &geomBuffer;
+        data.SysMemPitch        = sizeof(geomBuffer);
+        data.SysMemSlicePitch   = 0;
+
+        result = m_pDevice->CreateBuffer(&desc, &data, &m_pGeomBuffer);
+        assert(SUCCEEDED(result));
+
+        if (SUCCEEDED(result))
+        {
+            std::string name = "Geombuffer";
+
+            result = m_pInputLayout->SetPrivateData(WKPDID_D3DDebugObjectName,
+                (UINT)name.length(), name.c_str());
+        }
+    }
+
+    // Create scene buffer
+    if (SUCCEEDED(result))
+    {
+        D3D11_BUFFER_DESC desc = {};
+
+        desc.ByteWidth              = sizeof(SceneBuffer);
+        desc.Usage                  = D3D11_USAGE_DYNAMIC;
+        desc.BindFlags              = D3D11_BIND_CONSTANT_BUFFER;
+        desc.CPUAccessFlags         = D3D11_CPU_ACCESS_WRITE;
+        desc.MiscFlags              = 0;
+        desc.StructureByteStride    = 0;
+
+        result = m_pDevice->CreateBuffer(&desc, nullptr, &m_pSceneBuffer);
+        assert(SUCCEEDED(result));
+
+        if (SUCCEEDED(result))
+        {
+            std::string name = "SceneBuffer";
+
+            result = m_pInputLayout->SetPrivateData(WKPDID_D3DDebugObjectName,
+                (UINT)name.length(), name.c_str());
+        }
+    }
+
+    if (SUCCEEDED(result))
+    {
+        D3D11_RASTERIZER_DESC desc = {};
+        desc.AntialiasedLineEnable = FALSE;
+        desc.FillMode = D3D11_FILL_SOLID;
+        desc.CullMode = D3D11_CULL_BACK;
+        desc.FrontCounterClockwise = FALSE;
+        desc.DepthBias = 0;
+        desc.SlopeScaledDepthBias = 0.0f;
+        desc.DepthBiasClamp = 0.0f;
+        desc.DepthClipEnable = TRUE;
+        desc.ScissorEnable = FALSE;
+        desc.MultisampleEnable = FALSE;
+
+        result = m_pDevice->CreateRasterizerState(&desc, &m_pRasterizerState);
+        assert(SUCCEEDED(result));
+
+        if (SUCCEEDED(result))
+        {
+            std::string name = "RasterizerState";
+
+            result = m_pInputLayout->SetPrivateData(WKPDID_D3DDebugObjectName,
+                (UINT)name.length(), name.c_str());
+        }
+    }
 
     return S_OK;
 }

@@ -4,6 +4,11 @@
 #include <iostream>
 #include <string>
 #include <vector>
+#include <chrono>
+#include <math.h>
+#include <stdlib.h>
+
+#include <corecrt_math_defines.h>
 
 #include <d3d11.h>
 #include <dxgi.h>
@@ -22,9 +27,35 @@ enum class ShaderType {
     Pixel
 };
 
+struct GeomBuffer
+{
+    DirectX::XMMATRIX m;
+};
+
+struct SceneBuffer
+{
+    DirectX::XMMATRIX vp;
+};
+
+struct Point
+{
+    float x;
+    float y;
+    float z;
+};
+
+struct Camera
+{
+    Point poi;
+    float r;
+    float phi;
+    float theta;
+};
+
 class Renderer
 {
 public:
+
     Renderer()
         : m_pDevice(nullptr)
         , m_pDeviceContext(nullptr)
@@ -37,6 +68,13 @@ public:
         , m_pInputLayout(nullptr)
         , m_pVertexBuffer(nullptr)
         , m_pIndexBuffer(nullptr)
+        , m_pGeomBuffer(nullptr)
+        , m_pSceneBuffer(nullptr)
+        , m_pRasterizerState(nullptr)
+        , m_prevUSec(0)
+        , m_rotateModel(true)
+        , m_angle(0.0)
+        , m_camera()
     {
     }
 
@@ -46,6 +84,7 @@ public:
     void CleanupDevice();
 
     bool Render();
+    bool Update();
     bool Resize(UINT width, UINT height);
 
 private:
@@ -65,11 +104,22 @@ private:
     UINT m_width;
     UINT m_height;
 
+    Camera m_camera;
+
+    size_t m_prevUSec;
+
+    bool   m_rotateModel;
+    double m_angle;
+
     ID3D11Buffer* m_pVertexBuffer;
     ID3D11Buffer* m_pIndexBuffer;
+    ID3D11Buffer* m_pSceneBuffer;
+    ID3D11Buffer* m_pGeomBuffer;
 
     ID3D11PixelShader* m_pPixelShader;
     ID3D11VertexShader* m_pVertexShader;
     ID3D11InputLayout* m_pInputLayout;
+
+    ID3D11RasterizerState* m_pRasterizerState;
 };
 

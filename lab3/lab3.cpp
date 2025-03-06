@@ -55,7 +55,10 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
             }
         }
 
-        pRenderer->Render();
+        if (pRenderer->Update())
+        {
+            pRenderer->Render();
+        }
     }
 
     CleanupDevice();
