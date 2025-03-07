@@ -6,6 +6,7 @@ const float Renderer::CameraRotationSpeed = (float)M_PI * 2.0f;
 const float Renderer::CameraMovingSpeed   = (float)10.0f;
 const float Renderer::ModelRotationSpeed  = (float)M_PI / 2.0f;
 
+
 bool Renderer::InitDevice(HWND hWnd)
 {
     HRESULT result;
@@ -162,6 +163,7 @@ void Renderer::InitDebugLayer()
     }
 }
 
+
 void Renderer::CleanupDevice()
 {
     if (m_pDeviceContext)
@@ -255,6 +257,7 @@ void Renderer::CleanupDevice()
 
 }
 
+
 bool Renderer::Render()
 {
     m_pDeviceContext->ClearState();
@@ -309,6 +312,7 @@ bool Renderer::Render()
 
 }
 
+
 bool Renderer::Update()
 {
     size_t usec = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
@@ -330,7 +334,6 @@ bool Renderer::Update()
 
     m_pDeviceContext->UpdateSubresource(m_pGeomBuffer, 0, nullptr, &geomBuffer, 0, 0);
  
-
     UpdateCamera(deltaSec);
 
     m_prevUSec = usec;
@@ -659,7 +662,7 @@ HRESULT Renderer::CreateShader(const std::wstring& path, ShaderType shaderType, 
 #endif
 
 
-    ID3DBlob* pCode = nullptr;
+    ID3DBlob* pCode   = nullptr;
     ID3DBlob* pErrMsg = nullptr;
     HRESULT result = D3DCompile(data.data(), data.size(), nullptr,
         nullptr, nullptr, entryPoint.c_str(), platform.c_str(),
@@ -728,6 +731,7 @@ void Renderer::UpdateCamera(double deltaSec)
     float dirZ = cosf(m_camera.theta) * sinf(m_camera.phi);
 
     float upTheta = m_camera.theta + (float)M_PI / 2;
+
     float upX = cosf(upTheta) * cosf(m_camera.phi);
     float upY = sinf(upTheta);
     float upZ = cosf(upTheta) * sinf(m_camera.phi);
@@ -737,59 +741,55 @@ void Renderer::UpdateCamera(double deltaSec)
     float rightZ = dirX * upY - dirY * upX;
 
     float rightLen = sqrtf(rightX * rightX + rightY * rightY + rightZ * rightZ);
-    if (rightLen > 0.0f) {
+
+    if (rightLen > 0.0f) 
+    {
         rightX /= rightLen;
         rightY /= rightLen;
         rightZ /= rightLen;
     }
 
+    float posX = m_camera.poi.x + cosf(m_camera.theta) * cosf(m_camera.phi) * m_camera.r;
+    float posY = m_camera.poi.y + sinf(m_camera.theta) * m_camera.r;
+    float posZ = m_camera.poi.z + cosf(m_camera.theta) * sinf(m_camera.phi) * m_camera.r;
+
+    bool key = false;
+
     // Движение вперед (W)
     if (PressedKeys['W'])
     {
-        m_camera.poi.x -= dirX * cameraSpeed;
-        m_camera.poi.y -= dirY * cameraSpeed;
-        m_camera.poi.z -= dirZ * cameraSpeed;
+        m_camera.r -= cameraSpeed;
+        if (m_camera.r < 0.5f)
+        {
+            m_camera.r = 0.5f;
+        }
+
+        PressedKeys['W'] = false;
+        return;
     }
 
     // Движение назад (S)
     if (PressedKeys['S'])
     {
-        m_camera.poi.x += dirX * cameraSpeed;
-        m_camera.poi.y += dirY * cameraSpeed;
-        m_camera.poi.z += dirZ * cameraSpeed;
+        m_camera.r += cameraSpeed;
+        PressedKeys['S'] = false;
+
+        return;
     }
 
-    // Движение вправо (D)
-    if (PressedKeys['D'])
-    {
-        m_camera.poi.x += rightX * cameraSpeed;
-        m_camera.poi.y += rightY * cameraSpeed;
-        m_camera.poi.z += rightZ * cameraSpeed;
-    }
+    
 
-    // Движение влево (A)
-    if (PressedKeys['A'])
+    if (key == true)
     {
-        m_camera.poi.x -= rightX * cameraSpeed;
-        m_camera.poi.y -= rightY * cameraSpeed;
-        m_camera.poi.z -= rightZ * cameraSpeed;
-    }
+        float dx = posX - m_camera.poi.x;
+        float dy = posY - m_camera.poi.y;
+        float dz = posZ - m_camera.poi.z;
 
-    // Движение вверх (Space)
-    if (PressedKeys[VK_SPACE])
-    {
-        m_camera.poi.x += upX * cameraSpeed;
-        m_camera.poi.y += upY * cameraSpeed;
-        m_camera.poi.z += upZ * cameraSpeed;
-    }
+        m_camera.r = sqrtf(dx * dx + dy * dy + dz * dz);
 
-    // Движение вниз (Control)
-    if (PressedKeys[VK_CONTROL])
-    {
-        m_camera.poi.x -= upX * cameraSpeed;
-        m_camera.poi.y -= upY * cameraSpeed;
-        m_camera.poi.z -= upZ * cameraSpeed;
-    }
+        m_camera.theta = asinf(dy / m_camera.r);
+        m_camera.phi = atan2f(dz, dx);
+    }      
 }
 
 
@@ -809,10 +809,12 @@ void Renderer::OnMouseDown(WPARAM btnState, int x, int y)
     }
 }
 
+
 void Renderer::OnMouseUp(WPARAM btnState, int x, int y)
 {
     m_isMouseRotating = false;
 }
+
 
 void Renderer::OnMouseMove(WPARAM btnState, int x, int y)
 {
@@ -821,11 +823,8 @@ void Renderer::OnMouseMove(WPARAM btnState, int x, int y)
         float dx = (float)(x - m_lastMousePos.x) * m_mouseSensitivity;
         float dy = (float)(y - m_lastMousePos.y) * m_mouseSensitivity;
 
-        m_camera.phi += dx * CameraRotationSpeed;
+        m_camera.phi   += dx * CameraRotationSpeed;
         m_camera.theta -= dy * CameraRotationSpeed;
-
-        const float epsilon = 0.1f;
-        m_camera.theta = std::max<float>(epsilon, std::min<float>((float)M_PI - epsilon, m_camera.theta));
 
         m_lastMousePos.x = x;
         m_lastMousePos.y = y;
