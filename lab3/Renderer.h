@@ -118,7 +118,7 @@ private:
 
     bool m_isMouseRotating = false;
     POINT m_lastMousePos{};
-    float m_mouseSensitivity = 0.005f; // Чувствительность мыши
+    float m_mouseSensitivity = 0.005f;
 
     static const float CameraRotationSpeed;
     static const float CameraMovingSpeed;

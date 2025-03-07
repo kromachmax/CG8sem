@@ -196,16 +196,22 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     }
 
     case WM_LBUTTONDOWN:
+    {
         pRenderer->OnMouseDown(wParam, LOWORD(lParam), HIWORD(lParam));
         return 0;
+    }
 
     case WM_LBUTTONUP:
+    {
         pRenderer->OnMouseUp(wParam, LOWORD(lParam), HIWORD(lParam));
         return 0;
+    }
 
     case WM_MOUSEMOVE:
+    {
         pRenderer->OnMouseMove(wParam, LOWORD(lParam), HIWORD(lParam));
         return 0;
+    }
 
     default:
         return DefWindowProc(hWnd, message, wParam, lParam);

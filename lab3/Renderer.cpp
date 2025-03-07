@@ -723,24 +723,19 @@ void Renderer::UpdateCamera(double deltaSec)
 {
     float cameraSpeed = CameraMovingSpeed * (float)deltaSec;
 
-    // Направление взгляда камеры (вперед)
     float dirX = cosf(m_camera.theta) * cosf(m_camera.phi);
     float dirY = sinf(m_camera.theta);
     float dirZ = cosf(m_camera.theta) * sinf(m_camera.phi);
 
-    // Вектор "вверх" камеры
     float upTheta = m_camera.theta + (float)M_PI / 2;
     float upX = cosf(upTheta) * cosf(m_camera.phi);
     float upY = sinf(upTheta);
     float upZ = cosf(upTheta) * sinf(m_camera.phi);
-
-    // Вектор "вправо" (перпендикулярный направлению взгляда и "вверх")
-    // Используем векторное произведение: right = forward x up
+                   
     float rightX = dirY * upZ - dirZ * upY;
     float rightY = dirZ * upX - dirX * upZ;
     float rightZ = dirX * upY - dirY * upX;
 
-    // Нормализация вектора "вправо" (на случай, если он не единичный)
     float rightLen = sqrtf(rightX * rightX + rightY * rightY + rightZ * rightZ);
     if (rightLen > 0.0f) {
         rightX /= rightLen;
@@ -751,19 +746,17 @@ void Renderer::UpdateCamera(double deltaSec)
     // Движение вперед (W)
     if (PressedKeys['W'])
     {
-        m_camera.poi.x += dirX * cameraSpeed;
-        m_camera.poi.y += dirY * cameraSpeed;
-        m_camera.poi.z += dirZ * cameraSpeed;
-        std::cout << "Moving forward: (" << m_camera.poi.x << ", " << m_camera.poi.y << ", " << m_camera.poi.z << ")" << std::endl;
+        m_camera.poi.x -= dirX * cameraSpeed;
+        m_camera.poi.y -= dirY * cameraSpeed;
+        m_camera.poi.z -= dirZ * cameraSpeed;
     }
 
     // Движение назад (S)
     if (PressedKeys['S'])
     {
-        m_camera.poi.x -= dirX * cameraSpeed;
-        m_camera.poi.y -= dirY * cameraSpeed;
-        m_camera.poi.z -= dirZ * cameraSpeed;
-        std::cout << "Moving backward: (" << m_camera.poi.x << ", " << m_camera.poi.y << ", " << m_camera.poi.z << ")" << std::endl;
+        m_camera.poi.x += dirX * cameraSpeed;
+        m_camera.poi.y += dirY * cameraSpeed;
+        m_camera.poi.z += dirZ * cameraSpeed;
     }
 
     // Движение вправо (D)
@@ -772,7 +765,6 @@ void Renderer::UpdateCamera(double deltaSec)
         m_camera.poi.x += rightX * cameraSpeed;
         m_camera.poi.y += rightY * cameraSpeed;
         m_camera.poi.z += rightZ * cameraSpeed;
-        std::cout << "Moving right: (" << m_camera.poi.x << ", " << m_camera.poi.y << ", " << m_camera.poi.z << ")" << std::endl;
     }
 
     // Движение влево (A)
@@ -781,7 +773,6 @@ void Renderer::UpdateCamera(double deltaSec)
         m_camera.poi.x -= rightX * cameraSpeed;
         m_camera.poi.y -= rightY * cameraSpeed;
         m_camera.poi.z -= rightZ * cameraSpeed;
-        std::cout << "Moving left: (" << m_camera.poi.x << ", " << m_camera.poi.y << ", " << m_camera.poi.z << ")" << std::endl;
     }
 
     // Движение вверх (Space)
@@ -790,7 +781,6 @@ void Renderer::UpdateCamera(double deltaSec)
         m_camera.poi.x += upX * cameraSpeed;
         m_camera.poi.y += upY * cameraSpeed;
         m_camera.poi.z += upZ * cameraSpeed;
-        std::cout << "Moving up: (" << m_camera.poi.x << ", " << m_camera.poi.y << ", " << m_camera.poi.z << ")" << std::endl;
     }
 
     // Движение вниз (Control)
@@ -799,7 +789,6 @@ void Renderer::UpdateCamera(double deltaSec)
         m_camera.poi.x -= upX * cameraSpeed;
         m_camera.poi.y -= upY * cameraSpeed;
         m_camera.poi.z -= upZ * cameraSpeed;
-        std::cout << "Moving down: (" << m_camera.poi.x << ", " << m_camera.poi.y << ", " << m_camera.poi.z << ")" << std::endl;
     }
 }
 
@@ -812,7 +801,7 @@ void Renderer::SetPressedKeys(WPARAM pressedKey, bool flag)
 
 void Renderer::OnMouseDown(WPARAM btnState, int x, int y)
 {
-    if (btnState & MK_LBUTTON) // Используем правую кнопку мыши для вращения
+    if (btnState & MK_LBUTTON)
     {
         m_isMouseRotating = true;
         m_lastMousePos.x = x;
@@ -832,11 +821,9 @@ void Renderer::OnMouseMove(WPARAM btnState, int x, int y)
         float dx = (float)(x - m_lastMousePos.x) * m_mouseSensitivity;
         float dy = (float)(y - m_lastMousePos.y) * m_mouseSensitivity;
 
-        // Обновляем углы камеры
         m_camera.phi += dx * CameraRotationSpeed;
         m_camera.theta -= dy * CameraRotationSpeed;
 
-        // Ограничиваем угол theta, чтобы избежать переворота камеры
         const float epsilon = 0.1f;
         m_camera.theta = std::max<float>(epsilon, std::min<float>((float)M_PI - epsilon, m_camera.theta));
 
