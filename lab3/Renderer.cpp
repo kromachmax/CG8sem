@@ -2,8 +2,9 @@
 #include "framework.h"
 #include "Renderer.h"
 
-static const float CameraRotationSpeed = (float)M_PI * 2.0f;
-static const float ModelRotationSpeed = (float)M_PI / 2.0f;
+const float Renderer::CameraRotationSpeed = (float)M_PI * 2.0f;
+const float Renderer::CameraMovingSpeed   = (float)10.0f;
+const float Renderer::ModelRotationSpeed  = (float)M_PI / 2.0f;
 
 bool Renderer::InitDevice(HWND hWnd)
 {
@@ -265,24 +266,27 @@ bool Renderer::Render()
     m_pDeviceContext->ClearRenderTargetView(m_pBackBufferRTV, BackColor);
 
     D3D11_VIEWPORT viewport{};
-    viewport.TopLeftX = 0;
-    viewport.TopLeftY = 0;
-    viewport.Width = (FLOAT)m_width;
-    viewport.Height = (FLOAT)m_height;
-    viewport.MinDepth = 0.0f;
-    viewport.MaxDepth = 1.0f;
+    viewport.TopLeftX   = 0;
+    viewport.TopLeftY   = 0;
+    viewport.Width      = (FLOAT)m_width;
+    viewport.Height     = (FLOAT)m_height;
+    viewport.MinDepth   = 0.0f;
+    viewport.MaxDepth   = 1.0f;
+
     m_pDeviceContext->RSSetViewports(1, &viewport);
 
     D3D11_RECT rect{};
-    rect.left = 0;
-    rect.top = 0;
-    rect.right = m_width;
+    rect.left   = 0;
+    rect.top    = 0;
+    rect.right  = m_width;
     rect.bottom = m_height;
+
     m_pDeviceContext->RSSetScissorRects(1, &rect);
 
     m_pDeviceContext->IASetIndexBuffer(m_pIndexBuffer, DXGI_FORMAT_R16_UINT, 0);
 
     ID3D11Buffer* vertexBuffers[] = { m_pVertexBuffer };
+
     UINT strides[] = { 16 };
     UINT offsets[] = { 0 };
 
@@ -314,22 +318,22 @@ bool Renderer::Update()
         m_prevUSec = usec;
     }
 
-    if (m_rotateModel)
-    {
-        double deltaSec = (usec - m_prevUSec) / 1000000.0;
-        m_angle         = m_angle + deltaSec * ModelRotationSpeed;
+    double deltaSec = (usec - m_prevUSec) / 1000000.0;
 
-        GeomBuffer geomBuffer;
+    m_angle = m_angle + deltaSec * ModelRotationSpeed;
 
-        DirectX::XMMATRIX m = DirectX::XMMatrixRotationAxis(DirectX::XMVectorSet(0.0f, 1.0f, 0.0f, 1.0f), -(float)m_angle);
+    GeomBuffer geomBuffer;
 
-        geomBuffer.m = m;
+    DirectX::XMMATRIX m = DirectX::XMMatrixRotationAxis(DirectX::XMVectorSet(0.0f, 1.0f, 0.0f, 1.0f), -(float)m_angle);
 
-        m_pDeviceContext->UpdateSubresource(m_pGeomBuffer, 0, nullptr, &geomBuffer, 0, 0);
-    }
+    geomBuffer.m = m;
+
+    m_pDeviceContext->UpdateSubresource(m_pGeomBuffer, 0, nullptr, &geomBuffer, 0, 0);
+ 
+
+    UpdateCamera(deltaSec);
 
     m_prevUSec = usec;
-
 
     DirectX::XMMATRIX v;
     {
@@ -373,6 +377,7 @@ bool Renderer::Update()
     return SUCCEEDED(result);
 }
 
+
 bool Renderer::Resize(UINT width, UINT height)
 {
     if (width != m_width || height != m_height)
@@ -396,6 +401,7 @@ bool Renderer::Resize(UINT width, UINT height)
 
     return true;
 }
+
 
 HRESULT Renderer::SetupBackBuffer()
 {
@@ -710,4 +716,131 @@ HRESULT Renderer::CreateShader(const std::wstring& path, ShaderType shaderType, 
     }
 
     return result;
+}
+
+
+void Renderer::UpdateCamera(double deltaSec)
+{
+    float cameraSpeed = CameraMovingSpeed * (float)deltaSec;
+
+    // Направление взгляда камеры (вперед)
+    float dirX = cosf(m_camera.theta) * cosf(m_camera.phi);
+    float dirY = sinf(m_camera.theta);
+    float dirZ = cosf(m_camera.theta) * sinf(m_camera.phi);
+
+    // Вектор "вверх" камеры
+    float upTheta = m_camera.theta + (float)M_PI / 2;
+    float upX = cosf(upTheta) * cosf(m_camera.phi);
+    float upY = sinf(upTheta);
+    float upZ = cosf(upTheta) * sinf(m_camera.phi);
+
+    // Вектор "вправо" (перпендикулярный направлению взгляда и "вверх")
+    // Используем векторное произведение: right = forward x up
+    float rightX = dirY * upZ - dirZ * upY;
+    float rightY = dirZ * upX - dirX * upZ;
+    float rightZ = dirX * upY - dirY * upX;
+
+    // Нормализация вектора "вправо" (на случай, если он не единичный)
+    float rightLen = sqrtf(rightX * rightX + rightY * rightY + rightZ * rightZ);
+    if (rightLen > 0.0f) {
+        rightX /= rightLen;
+        rightY /= rightLen;
+        rightZ /= rightLen;
+    }
+
+    // Движение вперед (W)
+    if (PressedKeys['W'])
+    {
+        m_camera.poi.x += dirX * cameraSpeed;
+        m_camera.poi.y += dirY * cameraSpeed;
+        m_camera.poi.z += dirZ * cameraSpeed;
+        std::cout << "Moving forward: (" << m_camera.poi.x << ", " << m_camera.poi.y << ", " << m_camera.poi.z << ")" << std::endl;
+    }
+
+    // Движение назад (S)
+    if (PressedKeys['S'])
+    {
+        m_camera.poi.x -= dirX * cameraSpeed;
+        m_camera.poi.y -= dirY * cameraSpeed;
+        m_camera.poi.z -= dirZ * cameraSpeed;
+        std::cout << "Moving backward: (" << m_camera.poi.x << ", " << m_camera.poi.y << ", " << m_camera.poi.z << ")" << std::endl;
+    }
+
+    // Движение вправо (D)
+    if (PressedKeys['D'])
+    {
+        m_camera.poi.x += rightX * cameraSpeed;
+        m_camera.poi.y += rightY * cameraSpeed;
+        m_camera.poi.z += rightZ * cameraSpeed;
+        std::cout << "Moving right: (" << m_camera.poi.x << ", " << m_camera.poi.y << ", " << m_camera.poi.z << ")" << std::endl;
+    }
+
+    // Движение влево (A)
+    if (PressedKeys['A'])
+    {
+        m_camera.poi.x -= rightX * cameraSpeed;
+        m_camera.poi.y -= rightY * cameraSpeed;
+        m_camera.poi.z -= rightZ * cameraSpeed;
+        std::cout << "Moving left: (" << m_camera.poi.x << ", " << m_camera.poi.y << ", " << m_camera.poi.z << ")" << std::endl;
+    }
+
+    // Движение вверх (Space)
+    if (PressedKeys[VK_SPACE])
+    {
+        m_camera.poi.x += upX * cameraSpeed;
+        m_camera.poi.y += upY * cameraSpeed;
+        m_camera.poi.z += upZ * cameraSpeed;
+        std::cout << "Moving up: (" << m_camera.poi.x << ", " << m_camera.poi.y << ", " << m_camera.poi.z << ")" << std::endl;
+    }
+
+    // Движение вниз (Control)
+    if (PressedKeys[VK_CONTROL])
+    {
+        m_camera.poi.x -= upX * cameraSpeed;
+        m_camera.poi.y -= upY * cameraSpeed;
+        m_camera.poi.z -= upZ * cameraSpeed;
+        std::cout << "Moving down: (" << m_camera.poi.x << ", " << m_camera.poi.y << ", " << m_camera.poi.z << ")" << std::endl;
+    }
+}
+
+
+void Renderer::SetPressedKeys(WPARAM pressedKey, bool flag)
+{
+    PressedKeys[pressedKey] = flag;
+}
+
+
+void Renderer::OnMouseDown(WPARAM btnState, int x, int y)
+{
+    if (btnState & MK_LBUTTON) // Используем правую кнопку мыши для вращения
+    {
+        m_isMouseRotating = true;
+        m_lastMousePos.x = x;
+        m_lastMousePos.y = y;
+    }
+}
+
+void Renderer::OnMouseUp(WPARAM btnState, int x, int y)
+{
+    m_isMouseRotating = false;
+}
+
+void Renderer::OnMouseMove(WPARAM btnState, int x, int y)
+{
+    if (m_isMouseRotating)
+    {
+        float dx = (float)(x - m_lastMousePos.x) * m_mouseSensitivity;
+        float dy = (float)(y - m_lastMousePos.y) * m_mouseSensitivity;
+
+        // Обновляем углы камеры
+        m_camera.phi += dx * CameraRotationSpeed;
+        m_camera.theta -= dy * CameraRotationSpeed;
+
+        // Ограничиваем угол theta, чтобы избежать переворота камеры
+        const float epsilon = 0.1f;
+        m_camera.theta = std::max<float>(epsilon, std::min<float>((float)M_PI - epsilon, m_camera.theta));
+
+        m_lastMousePos.x = x;
+        m_lastMousePos.y = y;
+    }
 }

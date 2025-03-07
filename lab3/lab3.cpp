@@ -183,6 +183,30 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         break;
     }
 
+    case WM_KEYDOWN:
+    {
+        pRenderer->SetPressedKeys(wParam, true);
+        break;
+    }
+
+    case WM_KEYUP:
+    {
+        pRenderer->SetPressedKeys(wParam, false);
+        break;
+    }
+
+    case WM_LBUTTONDOWN:
+        pRenderer->OnMouseDown(wParam, LOWORD(lParam), HIWORD(lParam));
+        return 0;
+
+    case WM_LBUTTONUP:
+        pRenderer->OnMouseUp(wParam, LOWORD(lParam), HIWORD(lParam));
+        return 0;
+
+    case WM_MOUSEMOVE:
+        pRenderer->OnMouseMove(wParam, LOWORD(lParam), HIWORD(lParam));
+        return 0;
+
     default:
         return DefWindowProc(hWnd, message, wParam, lParam);
     }

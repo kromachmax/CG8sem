@@ -7,6 +7,7 @@
 #include <chrono>
 #include <math.h>
 #include <stdlib.h>
+#include <algorithm>
 
 #include <corecrt_math_defines.h>
 
@@ -71,10 +72,9 @@ public:
         , m_pGeomBuffer(nullptr)
         , m_pSceneBuffer(nullptr)
         , m_prevUSec(0)
-        , m_rotateModel(true)
         , m_angle(0.0)
-    {
-    }
+        , PressedKeys {false}
+    {}
 
     bool InitDevice(HWND hWnd);
     void InitDebugLayer();
@@ -85,12 +85,20 @@ public:
     bool Update();
     bool Resize(UINT width, UINT height);
 
+    void SetPressedKeys(WPARAM pressedKey, bool flag);
+
+    void OnMouseDown(WPARAM btnState, int x, int y);
+    void OnMouseUp(WPARAM btnState, int x, int y);
+    void OnMouseMove(WPARAM btnState, int x, int y);
+
 private:
     HRESULT SetupBackBuffer();
     HRESULT InitScene();
 
     HRESULT CreateShader(const std::wstring& path, ShaderType shaderType,
         ID3D11DeviceChild** ppShader, ID3DBlob** ppCode = nullptr);
+
+    void UpdateCamera(double deltaSec);
 
 private:
     ID3D11Device* m_pDevice;
@@ -102,12 +110,21 @@ private:
     UINT m_width;
     UINT m_height;
 
-    Camera m_camera;
+    Camera m_camera{};
 
     size_t m_prevUSec;
 
-    bool   m_rotateModel;
     double m_angle;
+
+    bool m_isMouseRotating = false;
+    POINT m_lastMousePos{};
+    float m_mouseSensitivity = 0.005f; // Чувствительность мыши
+
+    static const float CameraRotationSpeed;
+    static const float CameraMovingSpeed;
+    static const float ModelRotationSpeed;
+
+    bool PressedKeys[1024];
 
     ID3D11Buffer* m_pVertexBuffer;
     ID3D11Buffer* m_pIndexBuffer;
@@ -116,6 +133,7 @@ private:
 
     ID3D11PixelShader* m_pPixelShader;
     ID3D11VertexShader* m_pVertexShader;
+
     ID3D11InputLayout* m_pInputLayout;
 };
 
