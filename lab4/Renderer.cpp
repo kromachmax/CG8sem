@@ -1,6 +1,7 @@
 
 #include "framework.h"
 #include "Renderer.h"
+#include "DDS.h"
 
 const float Renderer::CameraRotationSpeed   = (float)M_PI * 2.0f;
 const float Renderer::CameraMovingSpeed     = (float)10.0f;
@@ -286,11 +287,17 @@ bool Renderer::Render()
 
     m_pDeviceContext->RSSetScissorRects(1, &rect);
 
+    ID3D11SamplerState* samplers[] = { m_pSampler };
+    m_pDeviceContext->PSSetSamplers(0, 1, samplers);
+
+    ID3D11ShaderResourceView* resources[] = { m_pTextureView };
+    m_pDeviceContext->PSSetShaderResources(0, 1, resources);
+
     m_pDeviceContext->IASetIndexBuffer(m_pIndexBuffer, DXGI_FORMAT_R16_UINT, 0);
 
     ID3D11Buffer* vertexBuffers[] = { m_pVertexBuffer };
 
-    UINT strides[] = { 16 };
+    UINT strides[] = { 20 };
     UINT offsets[] = { 0 };
 
     ID3D11Buffer* cbuffers[] = { m_pSceneBuffer, m_pGeomBuffer };
@@ -430,40 +437,54 @@ HRESULT Renderer::InitScene()
 {
     HRESULT result;
 
-    static const Vertex Vertices[] = {
-    {-0.5f, -0.5f, -0.5f, RGB(255, 0, 0)    },
-    { 0.5f, -0.5f, -0.5f, RGB(0, 255, 0)    },
-    { 0.5f,  0.5f, -0.5f, RGB(0, 0, 255)    },
-    {-0.5f,  0.5f, -0.5f, RGB(255, 255, 0)  },
-    {-0.5f, -0.5f,  0.5f, RGB(0, 255, 255)  },
-    { 0.5f, -0.5f,  0.5f, RGB(255, 0, 255)  },
-    { 0.5f,  0.5f,  0.5f, RGB(255, 255, 255)},
-    {-0.5f,  0.5f,  0.5f, RGB(0, 0, 0)      }
+    // Textured cube
+    static const TextureVertex Vertices[24] = {
+        // Bottom face
+        {-0.5, -0.5,  0.5, 0, 1},
+        { 0.5, -0.5,  0.5, 1, 1},
+        { 0.5, -0.5, -0.5, 1, 0},
+        {-0.5, -0.5, -0.5, 0, 0},
+        // Top face
+        {-0.5,  0.5, -0.5, 0, 1},
+        { 0.5,  0.5, -0.5, 1, 1},
+        { 0.5,  0.5,  0.5, 1, 0},
+        {-0.5,  0.5,  0.5, 0, 0},
+        // Front face
+        { 0.5, -0.5, -0.5, 0, 1},
+        { 0.5, -0.5,  0.5, 1, 1},
+        { 0.5,  0.5,  0.5, 1, 0},
+        { 0.5,  0.5, -0.5, 0, 0},
+        // Back face
+        {-0.5, -0.5,  0.5, 0, 1},
+        {-0.5, -0.5, -0.5, 1, 1},
+        {-0.5,  0.5, -0.5, 1, 0},
+        {-0.5,  0.5,  0.5, 0, 0},
+        // Left face
+        { 0.5, -0.5,  0.5, 0, 1},
+        {-0.5, -0.5,  0.5, 1, 1},
+        {-0.5,  0.5,  0.5, 1, 0},
+        { 0.5,  0.5,  0.5, 0, 0},
+        // Right face
+        {-0.5, -0.5, -0.5, 0, 1},
+        { 0.5, -0.5, -0.5, 1, 1},
+        { 0.5,  0.5, -0.5, 1, 0},
+        {-0.5,  0.5, -0.5, 0, 0}
     };
 
-    static const USHORT Indices[] = {
-        3,1,0,
-        2,1,3,
 
-        0,5,4,
-        1,5,0,
-
-        3,4,7,
-        0,4,3,
-
-        1,6,5,
-        2,6,1,
-
-        2,7,6,
-        3,7,2,
-
-        6,4,5,
-        7,4,6,
+    static const UINT16 Indices[36] = {
+        0, 2, 1, 0, 3, 2,
+        4, 6, 5, 4, 7, 6,
+        8, 10, 9, 8, 11, 10,
+        12, 14, 13, 12, 15, 14,
+        16, 18, 17, 16, 19, 18,
+        20, 22, 21, 20, 23, 22
     };
+
 
     static const D3D11_INPUT_ELEMENT_DESC InputDesc[] = {
-       {"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
-       {"COLOR", 0, DXGI_FORMAT_R8G8B8A8_UNORM, 0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0}
+        {"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
+        {"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0}
     };
 
     D3D11_BUFFER_DESC desc{};
@@ -600,6 +621,93 @@ HRESULT Renderer::InitScene()
             result = m_pSceneBuffer->SetPrivateData(WKPDID_D3DDebugObjectName,
                 (UINT)name.length(), name.c_str());
         }
+    }
+
+
+    // Load texture
+    DXGI_FORMAT textureFmt;
+    if (SUCCEEDED(result))
+    {
+        const std::wstring TextureName = L"../textures/bricks.dds";
+
+        TextureDesc textureDesc;
+        bool ddsRes = LoadDDS(TextureName.c_str(), textureDesc);
+
+        textureFmt = textureDesc.fmt;
+
+        D3D11_TEXTURE2D_DESC desc = {};
+        desc.Format = textureDesc.fmt;
+        desc.ArraySize = 1;
+        desc.MipLevels = textureDesc.mipmapsCount;
+        desc.Usage = D3D11_USAGE_IMMUTABLE;
+        desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+        desc.CPUAccessFlags = 0;
+        desc.MiscFlags = 0;
+        desc.SampleDesc.Count = 1;
+        desc.SampleDesc.Quality = 0;
+        desc.Height = textureDesc.height;
+        desc.Width = textureDesc.width;
+
+        UINT32 blockWidth = DivUp(desc.Width, 4u);
+        UINT32 blockHeight = DivUp(desc.Height, 4u);
+        UINT32 pitch = blockWidth * GetBytesPerBlock(desc.Format);
+        const char* pSrcData = reinterpret_cast<const char*>(textureDesc.pData);
+
+        std::vector<D3D11_SUBRESOURCE_DATA> data;
+        data.resize(desc.MipLevels);
+        for (UINT32 i = 0; i < desc.MipLevels; i++)
+        {
+            data[i].pSysMem = pSrcData;
+            data[i].SysMemPitch = pitch;
+            data[i].SysMemSlicePitch = 0;
+
+            pSrcData += pitch * blockHeight;
+            blockHeight = std::max(1u, blockHeight / 2);
+            blockWidth = std::max(1u, blockWidth / 2);
+            pitch = blockWidth * GetBytesPerBlock(desc.Format);
+        }
+        result = m_pDevice->CreateTexture2D(&desc, data.data(), &m_pTexture);
+        assert(SUCCEEDED(result));
+
+        if (SUCCEEDED(result))
+        {
+
+            result = m_pTexture->SetPrivateData(WKPDID_D3DDebugObjectName,
+                (UINT)TextureName.length(), TextureName.c_str());
+        }
+
+        free(textureDesc.pData);
+    }
+    if (SUCCEEDED(result))
+    {
+        D3D11_SHADER_RESOURCE_VIEW_DESC desc = {};
+        desc.Format = textureFmt;
+        desc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+        desc.Texture2D.MipLevels = 11;
+        desc.Texture2D.MostDetailedMip = 0;
+
+        result = m_pDevice->CreateShaderResourceView(m_pTexture, &desc, &m_pTextureView);
+        assert(SUCCEEDED(result));
+    }
+    if (SUCCEEDED(result))
+    {
+        D3D11_SAMPLER_DESC desc = {};
+
+        //desc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
+        //desc.Filter = D3D11_FILTER_MIN_MAG_POINT_MIP_LINEAR;
+        desc.Filter = D3D11_FILTER_ANISOTROPIC;
+        desc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
+        desc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
+        desc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
+        desc.MinLOD = -FLT_MAX;
+        desc.MaxLOD = FLT_MAX;
+        desc.MipLODBias = 0.0f;
+        desc.MaxAnisotropy = 16;
+        desc.ComparisonFunc = D3D11_COMPARISON_NEVER;
+        desc.BorderColor[0] = desc.BorderColor[1] = desc.BorderColor[2] = desc.BorderColor[3] = 1.0f;
+
+        result = m_pDevice->CreateSamplerState(&desc, &m_pSampler);
+        assert(SUCCEEDED(result));
     }
 
     return S_OK;
