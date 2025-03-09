@@ -726,35 +726,6 @@ void Renderer::UpdateCamera(double deltaSec)
 {
     float cameraSpeed = CameraMovingSpeed * (float)deltaSec;
 
-    float dirX = cosf(m_camera.theta) * cosf(m_camera.phi);
-    float dirY = sinf(m_camera.theta);
-    float dirZ = cosf(m_camera.theta) * sinf(m_camera.phi);
-
-    float upTheta = m_camera.theta + (float)M_PI / 2;
-
-    float upX = cosf(upTheta) * cosf(m_camera.phi);
-    float upY = sinf(upTheta);
-    float upZ = cosf(upTheta) * sinf(m_camera.phi);
-
-    float rightX = dirY * upZ - dirZ * upY;
-    float rightY = dirZ * upX - dirX * upZ;
-    float rightZ = dirX * upY - dirY * upX;
-
-    float rightLen = sqrtf(rightX * rightX + rightY * rightY + rightZ * rightZ);
-
-    if (rightLen > 0.0f)
-    {
-        rightX /= rightLen;
-        rightY /= rightLen;
-        rightZ /= rightLen;
-    }
-
-    float posX = m_camera.poi.x + cosf(m_camera.theta) * cosf(m_camera.phi) * m_camera.r;
-    float posY = m_camera.poi.y + sinf(m_camera.theta) * m_camera.r;
-    float posZ = m_camera.poi.z + cosf(m_camera.theta) * sinf(m_camera.phi) * m_camera.r;
-
-    bool key = false;
-
     // Движение вперед (W)
     if (PressedKeys['W'])
     {
@@ -777,19 +748,6 @@ void Renderer::UpdateCamera(double deltaSec)
         return;
     }
 
-
-
-    if (key == true)
-    {
-        float dx = posX - m_camera.poi.x;
-        float dy = posY - m_camera.poi.y;
-        float dz = posZ - m_camera.poi.z;
-
-        m_camera.r = sqrtf(dx * dx + dy * dy + dz * dz);
-
-        m_camera.theta = asinf(dy / m_camera.r);
-        m_camera.phi = atan2f(dz, dx);
-    }
 }
 
 
