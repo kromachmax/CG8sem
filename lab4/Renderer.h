@@ -23,6 +23,12 @@ struct Vertex
     COLORREF color;
 };
 
+struct TextureVertex
+{
+    float x, y, z;
+    float u, v;
+};
+
 enum class ShaderType {
     Vertex,
     Pixel
@@ -74,6 +80,9 @@ public:
         , m_prevUSec(0)
         , m_angle(0.0)
         , PressedKeys{ false }
+        , m_pTexture(nullptr)
+        , m_pTextureView(nullptr)
+        , m_pSampler(nullptr)
     {
     }
 
@@ -136,5 +145,9 @@ private:
     ID3D11VertexShader* m_pVertexShader;
 
     ID3D11InputLayout* m_pInputLayout;
+
+    ID3D11Texture2D* m_pTexture;
+    ID3D11ShaderResourceView* m_pTextureView;
+    ID3D11SamplerState* m_pSampler;
 };
 

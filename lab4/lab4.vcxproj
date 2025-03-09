@@ -129,6 +129,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="DDS.h" />
     <ClInclude Include="framework.h" />
     <ClInclude Include="lab4.h" />
     <ClInclude Include="Renderer.h" />
@@ -136,6 +137,7 @@
     <ClInclude Include="targetver.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="DDS.cpp" />
     <ClCompile Include="lab4.cpp" />
     <ClCompile Include="Renderer.cpp" />
   </ItemGroup>
