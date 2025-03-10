@@ -437,34 +437,33 @@ HRESULT Renderer::InitScene()
 {
     HRESULT result;
 
-    // Textured cube
     static const TextureVertex Vertices[24] = {
-        // Bottom face
+        
         {-0.5, -0.5,  0.5, 0, 1},
         { 0.5, -0.5,  0.5, 1, 1},
         { 0.5, -0.5, -0.5, 1, 0},
         {-0.5, -0.5, -0.5, 0, 0},
-        // Top face
+        
         {-0.5,  0.5, -0.5, 0, 1},
         { 0.5,  0.5, -0.5, 1, 1},
         { 0.5,  0.5,  0.5, 1, 0},
         {-0.5,  0.5,  0.5, 0, 0},
-        // Front face
+        
         { 0.5, -0.5, -0.5, 0, 1},
         { 0.5, -0.5,  0.5, 1, 1},
         { 0.5,  0.5,  0.5, 1, 0},
         { 0.5,  0.5, -0.5, 0, 0},
-        // Back face
+        
         {-0.5, -0.5,  0.5, 0, 1},
         {-0.5, -0.5, -0.5, 1, 1},
         {-0.5,  0.5, -0.5, 1, 0},
         {-0.5,  0.5,  0.5, 0, 0},
-        // Left face
+        
         { 0.5, -0.5,  0.5, 0, 1},
         {-0.5, -0.5,  0.5, 1, 1},
         {-0.5,  0.5,  0.5, 1, 0},
         { 0.5,  0.5,  0.5, 0, 0},
-        // Right face
+        
         {-0.5, -0.5, -0.5, 0, 1},
         { 0.5, -0.5, -0.5, 1, 1},
         { 0.5,  0.5, -0.5, 1, 0},
@@ -624,11 +623,11 @@ HRESULT Renderer::InitScene()
     }
 
 
-    // Load texture
     DXGI_FORMAT textureFmt;
+
     if (SUCCEEDED(result))
     {
-        const std::wstring TextureName = L"../textures/bricks.dds";
+        const std::wstring TextureName = L"../textures/design.dds";
 
         TextureDesc textureDesc;
         bool ddsRes = LoadDDS(TextureName.c_str(), textureDesc);
@@ -655,17 +654,19 @@ HRESULT Renderer::InitScene()
 
         std::vector<D3D11_SUBRESOURCE_DATA> data;
         data.resize(desc.MipLevels);
+
         for (UINT32 i = 0; i < desc.MipLevels; i++)
         {
-            data[i].pSysMem = pSrcData;
-            data[i].SysMemPitch = pitch;
+            data[i].pSysMem          = pSrcData;
+            data[i].SysMemPitch      = pitch;
             data[i].SysMemSlicePitch = 0;
 
-            pSrcData += pitch * blockHeight;
+            pSrcData    += pitch * blockHeight;
             blockHeight = std::max(1u, blockHeight / 2);
-            blockWidth = std::max(1u, blockWidth / 2);
-            pitch = blockWidth * GetBytesPerBlock(desc.Format);
+            blockWidth  = std::max(1u, blockWidth / 2);
+            pitch       = blockWidth * GetBytesPerBlock(desc.Format);
         }
+
         result = m_pDevice->CreateTexture2D(&desc, data.data(), &m_pTexture);
         assert(SUCCEEDED(result));
 
@@ -678,9 +679,11 @@ HRESULT Renderer::InitScene()
 
         free(textureDesc.pData);
     }
+
     if (SUCCEEDED(result))
     {
         D3D11_SHADER_RESOURCE_VIEW_DESC desc = {};
+
         desc.Format = textureFmt;
         desc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
         desc.Texture2D.MipLevels = 11;
@@ -689,18 +692,17 @@ HRESULT Renderer::InitScene()
         result = m_pDevice->CreateShaderResourceView(m_pTexture, &desc, &m_pTextureView);
         assert(SUCCEEDED(result));
     }
+
     if (SUCCEEDED(result))
     {
         D3D11_SAMPLER_DESC desc = {};
 
-        //desc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
-        //desc.Filter = D3D11_FILTER_MIN_MAG_POINT_MIP_LINEAR;
-        desc.Filter = D3D11_FILTER_ANISOTROPIC;
+        desc.Filter   = D3D11_FILTER_ANISOTROPIC;
         desc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
         desc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
         desc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
-        desc.MinLOD = -FLT_MAX;
-        desc.MaxLOD = FLT_MAX;
+        desc.MinLOD   = -FLT_MAX;
+        desc.MaxLOD   = FLT_MAX;
         desc.MipLODBias = 0.0f;
         desc.MaxAnisotropy = 16;
         desc.ComparisonFunc = D3D11_COMPARISON_NEVER;
