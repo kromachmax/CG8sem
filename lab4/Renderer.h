@@ -110,6 +110,11 @@ private:
 
     void UpdateCamera(double deltaSec);
 
+    HRESULT CreateVertexBuffer();
+    HRESULT CreateIndexBuffer();
+    HRESULT CreateGeomBuffer();
+    HRESULT CreateSceneBuffer();
+
 private:
     ID3D11Device* m_pDevice;
     ID3D11DeviceContext* m_pDeviceContext;
