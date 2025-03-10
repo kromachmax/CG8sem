@@ -435,110 +435,19 @@ HRESULT Renderer::SetupBackBuffer()
 
 HRESULT Renderer::InitScene()
 {
-    HRESULT result;
+    HRESULT result {};
 
-    // Textured cube
-    static const TextureVertex Vertices[24] = {
-        // Bottom face
-        {-0.5, -0.5,  0.5, 0, 1},
-        { 0.5, -0.5,  0.5, 1, 1},
-        { 0.5, -0.5, -0.5, 1, 0},
-        {-0.5, -0.5, -0.5, 0, 0},
-        // Top face
-        {-0.5,  0.5, -0.5, 0, 1},
-        { 0.5,  0.5, -0.5, 1, 1},
-        { 0.5,  0.5,  0.5, 1, 0},
-        {-0.5,  0.5,  0.5, 0, 0},
-        // Front face
-        { 0.5, -0.5, -0.5, 0, 1},
-        { 0.5, -0.5,  0.5, 1, 1},
-        { 0.5,  0.5,  0.5, 1, 0},
-        { 0.5,  0.5, -0.5, 0, 0},
-        // Back face
-        {-0.5, -0.5,  0.5, 0, 1},
-        {-0.5, -0.5, -0.5, 1, 1},
-        {-0.5,  0.5, -0.5, 1, 0},
-        {-0.5,  0.5,  0.5, 0, 0},
-        // Left face
-        { 0.5, -0.5,  0.5, 0, 1},
-        {-0.5, -0.5,  0.5, 1, 1},
-        {-0.5,  0.5,  0.5, 1, 0},
-        { 0.5,  0.5,  0.5, 0, 0},
-        // Right face
-        {-0.5, -0.5, -0.5, 0, 1},
-        { 0.5, -0.5, -0.5, 1, 1},
-        { 0.5,  0.5, -0.5, 1, 0},
-        {-0.5,  0.5, -0.5, 0, 0}
-    };
+    result = CreateVertexBuffer();
 
-
-    static const UINT16 Indices[36] = {
-        0, 2, 1, 0, 3, 2,
-        4, 6, 5, 4, 7, 6,
-        8, 10, 9, 8, 11, 10,
-        12, 14, 13, 12, 15, 14,
-        16, 18, 17, 16, 19, 18,
-        20, 22, 21, 20, 23, 22
-    };
-
+    if (SUCCEEDED(result))
+    {
+        result = CreateIndexBuffer();
+    }
 
     static const D3D11_INPUT_ELEMENT_DESC InputDesc[] = {
         {"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
         {"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0}
     };
-
-    D3D11_BUFFER_DESC desc{};
-
-    desc.ByteWidth = sizeof(Vertices);
-    desc.Usage = D3D11_USAGE_IMMUTABLE;
-    desc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
-    desc.CPUAccessFlags = 0;
-    desc.MiscFlags = 0;
-    desc.StructureByteStride = 0;
-
-    D3D11_SUBRESOURCE_DATA data{};
-
-    data.pSysMem = &Vertices;
-    data.SysMemPitch = sizeof(Vertices);
-    data.SysMemSlicePitch = 0;
-
-    result = m_pDevice->CreateBuffer(&desc, &data, &m_pVertexBuffer);
-    assert(SUCCEEDED(result));
-
-    if (SUCCEEDED(result))
-    {
-        std::string name = "VertexBuffer";
-
-        result = m_pVertexBuffer->SetPrivateData(WKPDID_D3DDebugObjectName,
-            (UINT)name.length(), name.c_str());
-    }
-
-    desc = {};
-
-    desc.ByteWidth = sizeof(Indices);
-    desc.Usage = D3D11_USAGE_IMMUTABLE;
-    desc.BindFlags = D3D11_BIND_INDEX_BUFFER;
-    desc.CPUAccessFlags = 0;
-    desc.MiscFlags = 0;
-    desc.StructureByteStride = 0;
-
-    data = {};
-
-    data.pSysMem = &Indices;
-    data.SysMemPitch = sizeof(Indices);
-    data.SysMemSlicePitch = 0;
-
-    result = m_pDevice->CreateBuffer(&desc, &data, &m_pIndexBuffer);
-    assert(SUCCEEDED(result));
-
-    if (SUCCEEDED(result))
-    {
-        std::string name = "IndexBuffer";
-
-        result = m_pIndexBuffer->SetPrivateData(WKPDID_D3DDebugObjectName,
-            (UINT)name.length(), name.c_str());
-    }
-
 
     ID3DBlob* pVertexShaderCode = nullptr;
 
@@ -570,65 +479,20 @@ HRESULT Renderer::InitScene()
 
     if (SUCCEEDED(result))
     {
-        D3D11_BUFFER_DESC desc = {};
-
-        desc.ByteWidth = sizeof(GeomBuffer);
-        desc.Usage = D3D11_USAGE_DEFAULT;
-        desc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-        desc.CPUAccessFlags = 0;
-        desc.MiscFlags = 0;
-        desc.StructureByteStride = 0;
-
-        GeomBuffer geomBuffer;
-        geomBuffer.m = DirectX::XMMatrixIdentity();
-
-        D3D11_SUBRESOURCE_DATA data;
-        data.pSysMem = &geomBuffer;
-        data.SysMemPitch = sizeof(geomBuffer);
-        data.SysMemSlicePitch = 0;
-
-        result = m_pDevice->CreateBuffer(&desc, &data, &m_pGeomBuffer);
-        assert(SUCCEEDED(result));
-
-        if (SUCCEEDED(result))
-        {
-            std::string name = "Geombuffer";
-
-            result = m_pGeomBuffer->SetPrivateData(WKPDID_D3DDebugObjectName,
-                (UINT)name.length(), name.c_str());
-        }
+        result = CreateGeomBuffer();
     }
-
 
     if (SUCCEEDED(result))
     {
-        D3D11_BUFFER_DESC desc = {};
-
-        desc.ByteWidth = sizeof(SceneBuffer);
-        desc.Usage = D3D11_USAGE_DYNAMIC;
-        desc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-        desc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-        desc.MiscFlags = 0;
-        desc.StructureByteStride = 0;
-
-        result = m_pDevice->CreateBuffer(&desc, nullptr, &m_pSceneBuffer);
-        assert(SUCCEEDED(result));
-
-        if (SUCCEEDED(result))
-        {
-            std::string name = "SceneBuffer";
-
-            result = m_pSceneBuffer->SetPrivateData(WKPDID_D3DDebugObjectName,
-                (UINT)name.length(), name.c_str());
-        }
+        result = CreateSceneBuffer();
     }
 
 
-    // Load texture
     DXGI_FORMAT textureFmt;
+
     if (SUCCEEDED(result))
     {
-        const std::wstring TextureName = L"../textures/bricks.dds";
+        const std::wstring TextureName = L"../textures/design.dds";
 
         TextureDesc textureDesc;
         bool ddsRes = LoadDDS(TextureName.c_str(), textureDesc);
@@ -648,24 +512,27 @@ HRESULT Renderer::InitScene()
         desc.Height = textureDesc.height;
         desc.Width = textureDesc.width;
 
-        UINT32 blockWidth = DivUp(desc.Width, 4u);
+        UINT32 blockWidth  = DivUp(desc.Width, 4u);
         UINT32 blockHeight = DivUp(desc.Height, 4u);
-        UINT32 pitch = blockWidth * GetBytesPerBlock(desc.Format);
+        UINT32 pitch       = blockWidth * GetBytesPerBlock(desc.Format);
+
         const char* pSrcData = reinterpret_cast<const char*>(textureDesc.pData);
 
         std::vector<D3D11_SUBRESOURCE_DATA> data;
         data.resize(desc.MipLevels);
+
         for (UINT32 i = 0; i < desc.MipLevels; i++)
         {
-            data[i].pSysMem = pSrcData;
-            data[i].SysMemPitch = pitch;
+            data[i].pSysMem          = pSrcData;
+            data[i].SysMemPitch      = pitch;
             data[i].SysMemSlicePitch = 0;
 
-            pSrcData += pitch * blockHeight;
+            pSrcData    += pitch * blockHeight;
             blockHeight = std::max(1u, blockHeight / 2);
-            blockWidth = std::max(1u, blockWidth / 2);
-            pitch = blockWidth * GetBytesPerBlock(desc.Format);
+            blockWidth  = std::max(1u, blockWidth / 2);
+            pitch       = blockWidth * GetBytesPerBlock(desc.Format);
         }
+
         result = m_pDevice->CreateTexture2D(&desc, data.data(), &m_pTexture);
         assert(SUCCEEDED(result));
 
@@ -678,9 +545,11 @@ HRESULT Renderer::InitScene()
 
         free(textureDesc.pData);
     }
+
     if (SUCCEEDED(result))
     {
         D3D11_SHADER_RESOURCE_VIEW_DESC desc = {};
+
         desc.Format = textureFmt;
         desc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
         desc.Texture2D.MipLevels = 11;
@@ -689,20 +558,19 @@ HRESULT Renderer::InitScene()
         result = m_pDevice->CreateShaderResourceView(m_pTexture, &desc, &m_pTextureView);
         assert(SUCCEEDED(result));
     }
+
     if (SUCCEEDED(result))
     {
         D3D11_SAMPLER_DESC desc = {};
 
-        //desc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
-        //desc.Filter = D3D11_FILTER_MIN_MAG_POINT_MIP_LINEAR;
-        desc.Filter = D3D11_FILTER_ANISOTROPIC;
-        desc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
-        desc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
-        desc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
-        desc.MinLOD = -FLT_MAX;
-        desc.MaxLOD = FLT_MAX;
-        desc.MipLODBias = 0.0f;
-        desc.MaxAnisotropy = 16;
+        desc.Filter         = D3D11_FILTER_ANISOTROPIC;
+        desc.AddressU       = D3D11_TEXTURE_ADDRESS_CLAMP;
+        desc.AddressV       = D3D11_TEXTURE_ADDRESS_CLAMP;
+        desc.AddressW       = D3D11_TEXTURE_ADDRESS_CLAMP;
+        desc.MinLOD         = -FLT_MAX;
+        desc.MaxLOD         = FLT_MAX;
+        desc.MipLODBias     = 0.0f;
+        desc.MaxAnisotropy  = 16;
         desc.ComparisonFunc = D3D11_COMPARISON_NEVER;
         desc.BorderColor[0] = desc.BorderColor[1] = desc.BorderColor[2] = desc.BorderColor[3] = 1.0f;
 
@@ -744,15 +612,15 @@ HRESULT Renderer::CreateShader(const std::wstring& path, ShaderType shaderType, 
     {
     case ShaderType::Vertex:
     {
-        entryPoint = "VS";
-        platform = "vs_5_0";
+        entryPoint  = "VS";
+        platform    = "vs_5_0";
         break;
     }
 
     case ShaderType::Pixel:
     {
-        entryPoint = "PS";
-        platform = "ps_5_0";
+        entryPoint  = "PS";
+        platform    = "ps_5_0";
         break;
     }
 
@@ -770,11 +638,11 @@ HRESULT Renderer::CreateShader(const std::wstring& path, ShaderType shaderType, 
 #endif
 
 
-    ID3DBlob* pCode = nullptr;
-    ID3DBlob* pErrMsg = nullptr;
-    HRESULT result = D3DCompile(data.data(), data.size(), nullptr,
-        nullptr, nullptr, entryPoint.c_str(), platform.c_str(),
-        flags1, 0, &pCode, &pErrMsg);
+    ID3DBlob* pCode     = nullptr;
+    ID3DBlob* pErrMsg   = nullptr;
+    HRESULT result      = D3DCompile(data.data(), data.size(), nullptr,
+                                     nullptr, nullptr, entryPoint.c_str(), platform.c_str(),
+                                     flags1, 0, &pCode, &pErrMsg);
 
 
 
@@ -856,6 +724,175 @@ void Renderer::UpdateCamera(double deltaSec)
         return;
     }
 
+}
+
+HRESULT Renderer::CreateVertexBuffer()
+{
+    HRESULT result;
+
+    static const TextureVertex Vertices[24] = {
+
+        {-0.5, -0.5,  0.5, 0, 1},
+        { 0.5, -0.5,  0.5, 1, 1},
+        { 0.5, -0.5, -0.5, 1, 0},
+        {-0.5, -0.5, -0.5, 0, 0},
+
+        {-0.5,  0.5, -0.5, 0, 1},
+        { 0.5,  0.5, -0.5, 1, 1},
+        { 0.5,  0.5,  0.5, 1, 0},
+        {-0.5,  0.5,  0.5, 0, 0},
+
+        { 0.5, -0.5, -0.5, 0, 1},
+        { 0.5, -0.5,  0.5, 1, 1},
+        { 0.5,  0.5,  0.5, 1, 0},
+        { 0.5,  0.5, -0.5, 0, 0},
+
+        {-0.5, -0.5,  0.5, 0, 1},
+        {-0.5, -0.5, -0.5, 1, 1},
+        {-0.5,  0.5, -0.5, 1, 0},
+        {-0.5,  0.5,  0.5, 0, 0},
+
+        { 0.5, -0.5,  0.5, 0, 1},
+        {-0.5, -0.5,  0.5, 1, 1},
+        {-0.5,  0.5,  0.5, 1, 0},
+        { 0.5,  0.5,  0.5, 0, 0},
+
+        {-0.5, -0.5, -0.5, 0, 1},
+        { 0.5, -0.5, -0.5, 1, 1},
+        { 0.5,  0.5, -0.5, 1, 0},
+        {-0.5,  0.5, -0.5, 0, 0}
+    };
+
+    D3D11_BUFFER_DESC desc{};
+
+    desc.ByteWidth = sizeof(Vertices);
+    desc.Usage = D3D11_USAGE_IMMUTABLE;
+    desc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+    desc.CPUAccessFlags = 0;
+    desc.MiscFlags = 0;
+    desc.StructureByteStride = 0;
+
+    D3D11_SUBRESOURCE_DATA data{};
+
+    data.pSysMem = &Vertices;
+    data.SysMemPitch = sizeof(Vertices);
+    data.SysMemSlicePitch = 0;
+
+    result = m_pDevice->CreateBuffer(&desc, &data, &m_pVertexBuffer);
+    assert(SUCCEEDED(result));
+
+    if (SUCCEEDED(result))
+    {
+        std::string name = "VertexBuffer";
+
+        result = m_pVertexBuffer->SetPrivateData(WKPDID_D3DDebugObjectName,
+            (UINT)name.length(), name.c_str());
+    }
+
+    return result;
+}
+
+HRESULT Renderer::CreateIndexBuffer()
+{
+    HRESULT result;
+
+    static const UINT16 Indices[36] = {
+        0, 2, 1, 0, 3, 2,
+        4, 6, 5, 4, 7, 6,
+        8, 10, 9, 8, 11, 10,
+        12, 14, 13, 12, 15, 14,
+        16, 18, 17, 16, 19, 18,
+        20, 22, 21, 20, 23, 22
+    };
+
+    D3D11_BUFFER_DESC desc{};
+    D3D11_SUBRESOURCE_DATA data{};
+
+    desc.ByteWidth = sizeof(Indices);
+    desc.Usage = D3D11_USAGE_IMMUTABLE;
+    desc.BindFlags = D3D11_BIND_INDEX_BUFFER;
+    desc.CPUAccessFlags = 0;
+    desc.MiscFlags = 0;
+    desc.StructureByteStride = 0;
+
+    data.pSysMem = &Indices;
+    data.SysMemPitch = sizeof(Indices);
+    data.SysMemSlicePitch = 0;
+
+    result = m_pDevice->CreateBuffer(&desc, &data, &m_pIndexBuffer);
+    assert(SUCCEEDED(result));
+
+    if (SUCCEEDED(result))
+    {
+        std::string name = "IndexBuffer";
+
+        result = m_pIndexBuffer->SetPrivateData(WKPDID_D3DDebugObjectName,
+            (UINT)name.length(), name.c_str());
+    }
+
+    return result;
+}
+
+HRESULT Renderer::CreateGeomBuffer()
+{
+    HRESULT result{};
+
+    D3D11_BUFFER_DESC desc = {};
+
+    desc.ByteWidth = sizeof(GeomBuffer);
+    desc.Usage = D3D11_USAGE_DEFAULT;
+    desc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+    desc.CPUAccessFlags = 0;
+    desc.MiscFlags = 0;
+    desc.StructureByteStride = 0;
+
+    GeomBuffer geomBuffer;
+    geomBuffer.m = DirectX::XMMatrixIdentity();
+
+    D3D11_SUBRESOURCE_DATA data;
+    data.pSysMem = &geomBuffer;
+    data.SysMemPitch = sizeof(geomBuffer);
+    data.SysMemSlicePitch = 0;
+
+    result = m_pDevice->CreateBuffer(&desc, &data, &m_pGeomBuffer);
+    assert(SUCCEEDED(result));
+
+    if (SUCCEEDED(result))
+    {
+        std::string name = "Geombuffer";
+
+        result = m_pGeomBuffer->SetPrivateData(WKPDID_D3DDebugObjectName,
+            (UINT)name.length(), name.c_str());
+    }
+
+    return result;
+}
+
+HRESULT Renderer::CreateSceneBuffer()
+{
+    HRESULT result{};
+
+    D3D11_BUFFER_DESC desc = {};
+
+    desc.ByteWidth = sizeof(SceneBuffer);
+    desc.Usage = D3D11_USAGE_DYNAMIC;
+    desc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+    desc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+    desc.MiscFlags = 0;
+    desc.StructureByteStride = 0;
+
+    result = m_pDevice->CreateBuffer(&desc, nullptr, &m_pSceneBuffer);
+    assert(SUCCEEDED(result));
+
+    if (SUCCEEDED(result))
+    {
+        std::string name = "SceneBuffer";
+
+        result = m_pSceneBuffer->SetPrivateData(WKPDID_D3DDebugObjectName,
+            (UINT)name.length(), name.c_str());
+    }
+
+    return result;
 }
 
 
