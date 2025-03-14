@@ -114,6 +114,9 @@ private:
     HRESULT CreateIndexBuffer();
     HRESULT CreateGeomBuffer();
     HRESULT CreateSceneBuffer();
+    HRESULT CreateSampler();
+
+    HRESULT LoadTexture();
 
 private:
     ID3D11Device* m_pDevice;
