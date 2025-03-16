@@ -89,6 +89,8 @@ public:
         , m_pSphereVertexShader(nullptr)
         , m_pSphereInputLayout(nullptr)
         , m_pSphere(nullptr)
+        , m_pCubemapTexture(nullptr)
+        , m_pCubemapView(nullptr)
     {
     }
 
@@ -125,7 +127,9 @@ private:
     HRESULT LoadTexture();
 
     HRESULT InitSphere();
-    HRESULT InitCubmap();
+    HRESULT InitCubemap();
+
+    void RenderSphere();
 
 private:
 
@@ -173,5 +177,8 @@ private:
     ID3D11VertexShader* m_pSphereVertexShader;
     ID3D11InputLayout*  m_pSphereInputLayout;
     Sphere*             m_pSphere;
+
+    ID3D11Texture2D* m_pCubemapTexture;
+    ID3D11ShaderResourceView* m_pCubemapView;
 };
 
