@@ -11,6 +11,18 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "lab3", "lab3\lab3.vcxproj",
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "lab4", "lab4\lab4.vcxproj", "{15388C3F-6766-4034-A06E-195DDE76851B}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Элементы решения", "Элементы решения", "{754FC069-D67B-A9D7-50A1-8D1CA196D8F1}"
+	ProjectSection(SolutionItems) = preProject
+		textures\bricks.dds = textures\bricks.dds
+		textures\design.dds = textures\design.dds
+		textures\negx.dds = textures\negx.dds
+		textures\negy.dds = textures\negy.dds
+		textures\negz.dds = textures\negz.dds
+		textures\posx.dds = textures\posx.dds
+		textures\posy.dds = textures\posy.dds
+		textures\posz.dds = textures\posz.dds
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64

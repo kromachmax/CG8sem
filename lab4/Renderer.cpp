@@ -1064,8 +1064,8 @@ HRESULT Renderer::InitCubemap()
     {
         const std::wstring TextureNames[6] =
         {
-            L"../textures/posy.dds", L"../textures/negy.dds",
             L"../textures/posx.dds", L"../textures/negx.dds",
+            L"../textures/posy.dds", L"../textures/negy.dds",
             L"../textures/posz.dds", L"../textures/negz.dds"
         };
 
