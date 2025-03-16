@@ -693,7 +693,34 @@ HRESULT Renderer::CreateShader(const std::wstring& path, ShaderType shaderType, 
 
 void Renderer::UpdateCamera(double deltaSec)
 {
+
     float cameraSpeed = CameraMovingSpeed * (float)deltaSec;
+
+
+    float dirX = cosf(m_camera.theta) * cosf(m_camera.phi);
+    float dirY = sinf(m_camera.theta);
+    float dirZ = cosf(m_camera.theta) * sinf(m_camera.phi);
+
+
+    float upTheta = m_camera.theta + (float)M_PI / 2;
+    float upX = cosf(upTheta) * cosf(m_camera.phi);
+    float upY = sinf(upTheta);
+    float upZ = cosf(upTheta) * sinf(m_camera.phi);
+
+
+    float rightX = dirY * upZ - dirZ * upY;
+    float rightY = dirZ * upX - dirX * upZ;
+    float rightZ = dirX * upY - dirY * upX;
+
+
+    float rightLen = sqrtf(rightX * rightX + rightY * rightY + rightZ * rightZ);
+
+
+    if (rightLen > 0.0f) {
+        rightX /= rightLen;
+        rightY /= rightLen;
+        rightZ /= rightLen;
+    }
 
     // Движение вперед (W)
     if (PressedKeys['W'])
@@ -705,7 +732,6 @@ void Renderer::UpdateCamera(double deltaSec)
         }
 
         PressedKeys['W'] = false;
-        return;
     }
 
     // Движение назад (S)
@@ -713,11 +739,50 @@ void Renderer::UpdateCamera(double deltaSec)
     {
         m_camera.r += cameraSpeed;
         PressedKeys['S'] = false;
-
-        return;
     }
 
+
+    if (PressedKeys['D'])
+    {
+        m_camera.poi.x += rightX * cameraSpeed;
+        m_camera.poi.y += rightY * cameraSpeed;
+        m_camera.poi.z += rightZ * cameraSpeed;
+
+        PressedKeys['D'] = false;
+    }
+
+
+    if (PressedKeys['A'])
+    {
+        m_camera.poi.x -= rightX * cameraSpeed;
+        m_camera.poi.y -= rightY * cameraSpeed;
+        m_camera.poi.z -= rightZ * cameraSpeed;
+
+
+        PressedKeys['A'] = false;
+    }
+
+
+    if (PressedKeys[VK_SPACE])
+    {
+        m_camera.poi.x += upX * cameraSpeed;
+        m_camera.poi.y += upY * cameraSpeed;
+        m_camera.poi.z += upZ * cameraSpeed;
+
+        PressedKeys[VK_SPACE] = false;
+    }
+
+
+    if (PressedKeys[VK_CONTROL])
+    {
+        m_camera.poi.x -= upX * cameraSpeed;
+        m_camera.poi.y -= upY * cameraSpeed;
+        m_camera.poi.z -= upZ * cameraSpeed;
+
+        PressedKeys[VK_CONTROL] = false;
+    }
 }
+
 
 
 HRESULT Renderer::CreateVertexBuffer()
@@ -919,7 +984,7 @@ HRESULT Renderer::LoadTexture()
     DXGI_FORMAT textureFmt;
     HRESULT result;
 
-    const std::wstring TextureName = L"../textures/design.dds";
+    const std::wstring TextureName = L"../textures/metal.dds";
 
     TextureDesc textureDesc;
     bool ddsRes = LoadDDS(TextureName.c_str(), textureDesc);
@@ -979,7 +1044,7 @@ HRESULT Renderer::LoadTexture()
 
         desc.Format = textureFmt;
         desc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
-        desc.Texture2D.MipLevels = 11;
+        desc.Texture2D.MipLevels = 1;
         desc.Texture2D.MostDetailedMip = 0;
 
         result = m_pDevice->CreateShaderResourceView(m_pTexture, &desc, &m_pTextureView);
@@ -1064,9 +1129,9 @@ HRESULT Renderer::InitCubemap()
     {
         const std::wstring TextureNames[6] =
         {
-            L"../textures/posx.dds", L"../textures/negx.dds",
-            L"../textures/posy.dds", L"../textures/negy.dds",
-            L"../textures/posz.dds", L"../textures/negz.dds"
+            L"../textures/px.dds", L"../textures/nx.dds",
+            L"../textures/py.dds", L"../textures/ny.dds",
+            L"../textures/pz.dds", L"../textures/nz.dds"
         };
 
         TextureDesc texDescs[6];

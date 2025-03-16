@@ -16,11 +16,17 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Элементы решен
 		textures\bricks.dds = textures\bricks.dds
 		textures\design.dds = textures\design.dds
 		textures\negx.dds = textures\negx.dds
+		pictures\negx.jpg = pictures\negx.jpg
 		textures\negy.dds = textures\negy.dds
+		pictures\negy.jpg = pictures\negy.jpg
 		textures\negz.dds = textures\negz.dds
+		pictures\negz.jpg = pictures\negz.jpg
 		textures\posx.dds = textures\posx.dds
+		pictures\posx.jpg = pictures\posx.jpg
 		textures\posy.dds = textures\posy.dds
+		pictures\posy.jpg = pictures\posy.jpg
 		textures\posz.dds = textures\posz.dds
+		pictures\posz.jpg = pictures\posz.jpg
 	EndProjectSection
 EndProject
 Global
