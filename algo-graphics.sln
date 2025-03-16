@@ -29,6 +29,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Элементы решен
 		pictures\posz.jpg = pictures\posz.jpg
 	EndProjectSection
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "lab5", "lab5\lab5.vcxproj", "{3DC8DB2C-3350-48D8-9127-4A2D2E8CB191}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -69,6 +71,14 @@ Global
 		{15388C3F-6766-4034-A06E-195DDE76851B}.Release|x64.Build.0 = Release|x64
 		{15388C3F-6766-4034-A06E-195DDE76851B}.Release|x86.ActiveCfg = Release|Win32
 		{15388C3F-6766-4034-A06E-195DDE76851B}.Release|x86.Build.0 = Release|Win32
+		{3DC8DB2C-3350-48D8-9127-4A2D2E8CB191}.Debug|x64.ActiveCfg = Debug|x64
+		{3DC8DB2C-3350-48D8-9127-4A2D2E8CB191}.Debug|x64.Build.0 = Debug|x64
+		{3DC8DB2C-3350-48D8-9127-4A2D2E8CB191}.Debug|x86.ActiveCfg = Debug|Win32
+		{3DC8DB2C-3350-48D8-9127-4A2D2E8CB191}.Debug|x86.Build.0 = Debug|Win32
+		{3DC8DB2C-3350-48D8-9127-4A2D2E8CB191}.Release|x64.ActiveCfg = Release|x64
+		{3DC8DB2C-3350-48D8-9127-4A2D2E8CB191}.Release|x64.Build.0 = Release|x64
+		{3DC8DB2C-3350-48D8-9127-4A2D2E8CB191}.Release|x86.ActiveCfg = Release|Win32
+		{3DC8DB2C-3350-48D8-9127-4A2D2E8CB191}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
