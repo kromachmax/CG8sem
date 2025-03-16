@@ -134,12 +134,14 @@
     <ClInclude Include="lab4.h" />
     <ClInclude Include="Renderer.h" />
     <ClInclude Include="Resource.h" />
+    <ClInclude Include="Sphere.h" />
     <ClInclude Include="targetver.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="DDS.cpp" />
     <ClCompile Include="lab4.cpp" />
     <ClCompile Include="Renderer.cpp" />
+    <ClCompile Include="Sphere.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="lab4.rc" />
@@ -155,6 +157,24 @@
     <CopyFileToFolders Include="VertexShader.hlsl">
       <FileType>Document</FileType>
     </CopyFileToFolders>
+  </ItemGroup>
+  <ItemGroup>
+    <FxCompile Include="PixelSphereShader.hlsl">
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Pixel</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Pixel</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Pixel</ShaderType>
+      <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">PS</EntryPointName>
+      <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">PS</EntryPointName>
+    </FxCompile>
+    <FxCompile Include="VertexSphereShader.hlsl">
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Vertex</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Vertex</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Vertex</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Vertex</ShaderType>
+      <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">VS</EntryPointName>
+      <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">VS</EntryPointName>
+    </FxCompile>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

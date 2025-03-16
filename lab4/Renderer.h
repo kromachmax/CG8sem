@@ -17,6 +17,8 @@
 
 #include "framework.h"
 
+#include "Sphere.h"
+
 struct Vertex
 {
     float x, y, z;
@@ -83,6 +85,10 @@ public:
         , m_pTexture(nullptr)
         , m_pTextureView(nullptr)
         , m_pSampler(nullptr)
+        , m_pSpherePixelShader(nullptr)
+        , m_pSphereVertexShader(nullptr)
+        , m_pSphereInputLayout(nullptr)
+        , m_pSphere(nullptr)
     {
     }
 
@@ -118,11 +124,15 @@ private:
 
     HRESULT LoadTexture();
 
+    HRESULT InitSphere();
+    HRESULT InitCubmap();
+
 private:
-    ID3D11Device* m_pDevice;
+
+    ID3D11Device*        m_pDevice;
     ID3D11DeviceContext* m_pDeviceContext;
 
-    IDXGISwapChain* m_pSwapChain;
+    IDXGISwapChain*         m_pSwapChain;
     ID3D11RenderTargetView* m_pBackBufferRTV;
 
     UINT m_width;
@@ -149,13 +159,19 @@ private:
     ID3D11Buffer* m_pSceneBuffer;
     ID3D11Buffer* m_pGeomBuffer;
 
-    ID3D11PixelShader* m_pPixelShader;
+    ID3D11PixelShader*  m_pPixelShader;
     ID3D11VertexShader* m_pVertexShader;
 
     ID3D11InputLayout* m_pInputLayout;
 
-    ID3D11Texture2D* m_pTexture;
-    ID3D11ShaderResourceView* m_pTextureView;
-    ID3D11SamplerState* m_pSampler;
+    ID3D11Texture2D*            m_pTexture;
+    ID3D11ShaderResourceView*   m_pTextureView;
+    ID3D11SamplerState*         m_pSampler;
+
+
+    ID3D11PixelShader*  m_pSpherePixelShader;
+    ID3D11VertexShader* m_pSphereVertexShader;
+    ID3D11InputLayout*  m_pSphereInputLayout;
+    Sphere*             m_pSphere;
 };
 
