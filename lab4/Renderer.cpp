@@ -228,6 +228,54 @@ void Renderer::CleanupDevice()
         m_pSceneBuffer = nullptr;
     }
 
+    if (m_pTexture)
+    {
+        m_pTexture->Release();
+        m_pTexture = nullptr;
+    }
+
+    if (m_pTextureView)
+    {
+        m_pTextureView->Release();
+        m_pTextureView = nullptr;
+    }
+
+    if (m_pSampler)
+    {
+        m_pSampler->Release();
+        m_pSampler = nullptr;
+    }
+
+    if (m_pSpherePixelShader)
+    {
+        m_pSpherePixelShader->Release();
+        m_pSpherePixelShader = nullptr;
+    }
+
+    if (m_pSphereVertexShader)
+    {
+        m_pSphereVertexShader->Release();
+        m_pSphereVertexShader = nullptr;
+    }
+
+    if (m_pSphereInputLayout)
+    {
+        m_pSphereInputLayout->Release();
+        m_pSphereInputLayout = nullptr;
+    }
+
+    if (m_pCubemapTexture)
+    {
+        m_pCubemapTexture->Release();
+        m_pCubemapTexture = nullptr;
+    }
+
+    if (m_pCubemapView)
+    {
+        m_pCubemapView->Release();
+        m_pCubemapView = nullptr;
+    }
+
     if (m_pSphere != nullptr)
     {
         m_pSphere->CleanupSphere();
@@ -294,6 +342,8 @@ bool Renderer::Render()
     rect.bottom = m_height;
 
     m_pDeviceContext->RSSetScissorRects(1, &rect);
+
+    RenderSphere();
 
     ID3D11SamplerState* samplers[] = { m_pSampler };
     m_pDeviceContext->PSSetSamplers(0, 1, samplers);
@@ -410,8 +460,20 @@ bool Renderer::Resize(UINT width, UINT height)
         {
             m_width = width;
             m_height = height;
-
             result = SetupBackBuffer();
+
+            //// Setup skybox sphere
+            //float n = 0.1f;
+            //float fov = (float)M_PI / 3;
+            //float halfW = tanf(fov / 2) * n;
+            //float halfH = (float)m_height / m_width * halfW;
+
+            //float r = sqrtf(n * n + halfH * halfH + halfW * halfW) * 1.1f * 2.0f;
+
+            //SphereGeomBuffer geomBuffer;
+            //geomBuffer.m = DirectX::XMMatrixIdentity();
+            //geomBuffer.size = r;
+            //m_pDeviceContext->UpdateSubresource(m_pSphere->m_pSphereGeomBuffer, 0, nullptr, &geomBuffer, 0, 0);
         }
 
         return SUCCEEDED(result);
@@ -503,6 +565,17 @@ HRESULT Renderer::InitScene()
     if (SUCCEEDED(result))
     {
         result = CreateSampler();
+    }
+
+    if (SUCCEEDED(result))
+    {
+        result = InitSphere();
+        assert(SUCCEEDED(result));
+    }
+    if (SUCCEEDED(result))
+    {
+        result = InitCubemap();
+        assert(SUCCEEDED(result));
     }
 
     return result;
@@ -982,11 +1055,111 @@ HRESULT Renderer::InitSphere()
     return result;
 }
 
-HRESULT Renderer::InitCubmap()
+
+HRESULT Renderer::InitCubemap()
 {
-    HRESULT result{};
+    HRESULT result = S_OK;
+
+    DXGI_FORMAT textureFmt;
+    if (SUCCEEDED(result))
+    {
+        const std::wstring TextureNames[6] =
+        {
+            L"../textures/posx.dds", L"../textures/negx.dds",
+            L"../textures/posy.dds", L"../textures/negy.dds",
+            L"../textures/posz.dds", L"../textures/negz.dds"
+        };
+        TextureDesc texDescs[6];
+        bool ddsRes = true;
+        for (int i = 0; i < 6 && ddsRes; i++)
+        {
+            ddsRes = LoadDDS(TextureNames[i].c_str(), texDescs[i], true);
+        }
+
+        textureFmt = texDescs[0].fmt; // Assume all are the same
+
+        D3D11_TEXTURE2D_DESC desc = {};
+        desc.Format = textureFmt;
+        desc.ArraySize = 6;
+        desc.MipLevels = 1;
+        desc.Usage = D3D11_USAGE_IMMUTABLE;
+        desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+        desc.CPUAccessFlags = 0;
+        desc.MiscFlags = D3D11_RESOURCE_MISC_TEXTURECUBE;
+        desc.SampleDesc.Count = 1;
+        desc.SampleDesc.Quality = 0;
+        desc.Height = texDescs[0].height;
+        desc.Width = texDescs[0].width;
+
+        UINT32 blockWidth = DivUp(desc.Width, 4u);
+        UINT32 blockHeight = DivUp(desc.Height, 4u);
+        UINT32 pitch = blockWidth * GetBytesPerBlock(desc.Format);
+
+        D3D11_SUBRESOURCE_DATA data[6];
+        for (int i = 0; i < 6; i++)
+        {
+            data[i].pSysMem = texDescs[i].pData;
+            data[i].SysMemPitch = pitch;
+            data[i].SysMemSlicePitch = 0;
+        }
+        result = m_pDevice->CreateTexture2D(&desc, data, &m_pCubemapTexture);
+        assert(SUCCEEDED(result));
+      
+        if (SUCCEEDED(result))
+        {
+            std::string name = "CubemapTexture";
+
+            result = m_pCubemapTexture->SetPrivateData(WKPDID_D3DDebugObjectName,
+                (UINT)name.length(), name.c_str());
+        }
+
+        for (int i = 0; i < 6; i++)
+        {
+            free(texDescs[i].pData);
+        }
+    }
+    if (SUCCEEDED(result))
+    {
+        D3D11_SHADER_RESOURCE_VIEW_DESC desc;
+        desc.Format = textureFmt;
+        desc.ViewDimension = D3D_SRV_DIMENSION_TEXTURECUBE;
+        desc.TextureCube.MipLevels = 1;
+        desc.TextureCube.MostDetailedMip = 0;
+
+        result = m_pDevice->CreateShaderResourceView(m_pCubemapTexture, &desc, &m_pCubemapView);
+     
+        if (SUCCEEDED(result))
+        {
+            std::string name = "CubemapView";
+
+            result = m_pCubemapView->SetPrivateData(WKPDID_D3DDebugObjectName,
+                (UINT)name.length(), name.c_str());
+        }
+    }
 
     return result;
+}
+
+void Renderer::RenderSphere()
+{
+    ID3D11SamplerState* samplers[] = { m_pSampler };
+    m_pDeviceContext->PSSetSamplers(0, 1, samplers);
+
+    ID3D11ShaderResourceView* resources[] = { m_pCubemapView };
+    m_pDeviceContext->PSSetShaderResources(0, 1, resources);
+
+    m_pDeviceContext->IASetIndexBuffer(m_pSphere->m_pSphereIndexBuffer, DXGI_FORMAT_R16_UINT, 0);
+    ID3D11Buffer* vertexBuffers[] = { m_pSphere->m_pSphereVertexBuffer };
+    UINT strides[] = { 12 };
+    UINT offsets[] = { 0 };
+    ID3D11Buffer* cbuffers[] = { m_pSceneBuffer, m_pSphere->m_pSphereGeomBuffer };
+    m_pDeviceContext->IASetVertexBuffers(0, 1, vertexBuffers, strides, offsets);
+    m_pDeviceContext->IASetInputLayout(m_pSphereInputLayout);
+    m_pDeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+    m_pDeviceContext->VSSetShader(m_pSphereVertexShader, nullptr, 0);
+    m_pDeviceContext->VSSetConstantBuffers(0, 2, cbuffers);
+    m_pDeviceContext->PSSetShader(m_pSpherePixelShader, nullptr, 0);
+    m_pDeviceContext->DrawIndexed(m_pSphere->m_sphereIndexCount, 0, 0);
 }
 
 
