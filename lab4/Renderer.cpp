@@ -114,7 +114,7 @@ bool Renderer::InitDevice(HWND hWnd)
 
     if (SUCCEEDED(result))
     {
-        m_camera.poi = Point{ 0,0,0 };
+        m_camera.poi = XMFLOAT3{ 0,0,0 };
         m_camera.r = 5.0f;
         m_camera.phi = -(float)M_PI / 4;
         m_camera.theta = (float)M_PI / 4;
@@ -404,6 +404,7 @@ bool Renderer::Update()
     m_prevUSec = usec;
 
     DirectX::XMMATRIX v;
+    XMFLOAT4 cameraPos;
     {
         float posX = m_camera.poi.x + cosf(m_camera.theta) * cosf(m_camera.phi) * m_camera.r;
         float posY = m_camera.poi.y + sinf(m_camera.theta) * m_camera.r;
@@ -420,6 +421,9 @@ bool Renderer::Update()
             DirectX::XMVectorSet(m_camera.poi.x, m_camera.poi.y, m_camera.poi.z, 0.0f),
             DirectX::XMVectorSet(upX, upY, upZ, 0.0f)
         );
+
+
+        cameraPos = { posX, posY, posZ };
     }
 
     float f = 100.0f;
@@ -438,6 +442,7 @@ bool Renderer::Update()
         SceneBuffer& sceneBuffer = *reinterpret_cast<SceneBuffer*>(subresource.pData);
 
         sceneBuffer.vp = DirectX::XMMatrixMultiply(v, p);
+        sceneBuffer.cameraPos = cameraPos;
 
         m_pDeviceContext->Unmap(m_pSceneBuffer, 0);
     }
@@ -460,20 +465,8 @@ bool Renderer::Resize(UINT width, UINT height)
         {
             m_width = width;
             m_height = height;
+
             result = SetupBackBuffer();
-
-            //// Setup skybox sphere
-            //float n = 0.1f;
-            //float fov = (float)M_PI / 3;
-            //float halfW = tanf(fov / 2) * n;
-            //float halfH = (float)m_height / m_width * halfW;
-
-            //float r = sqrtf(n * n + halfH * halfH + halfW * halfW) * 1.1f * 2.0f;
-
-            //SphereGeomBuffer geomBuffer;
-            //geomBuffer.m = DirectX::XMMatrixIdentity();
-            //geomBuffer.size = r;
-            //m_pDeviceContext->UpdateSubresource(m_pSphere->m_pSphereGeomBuffer, 0, nullptr, &geomBuffer, 0, 0);
         }
 
         return SUCCEEDED(result);
@@ -726,6 +719,7 @@ void Renderer::UpdateCamera(double deltaSec)
 
 }
 
+
 HRESULT Renderer::CreateVertexBuffer()
 {
     HRESULT result;
@@ -791,6 +785,7 @@ HRESULT Renderer::CreateVertexBuffer()
 
     return result;
 }
+
 
 HRESULT Renderer::CreateIndexBuffer()
 {
@@ -868,6 +863,7 @@ HRESULT Renderer::CreateGeomBuffer()
     return result;
 }
 
+
 HRESULT Renderer::CreateSceneBuffer()
 {
     HRESULT result{};
@@ -916,6 +912,7 @@ HRESULT Renderer::CreateSampler()
     
     return result;
 }
+
 
 HRESULT Renderer::LoadTexture()
 {
@@ -992,6 +989,7 @@ HRESULT Renderer::LoadTexture()
     return result;
 }
 
+
 HRESULT Renderer::InitSphere()
 {
     static const D3D11_INPUT_ELEMENT_DESC InputDesc[] = {
@@ -1061,22 +1059,25 @@ HRESULT Renderer::InitCubemap()
     HRESULT result = S_OK;
 
     DXGI_FORMAT textureFmt;
+
     if (SUCCEEDED(result))
     {
         const std::wstring TextureNames[6] =
         {
-            L"../textures/posx.dds", L"../textures/negx.dds",
             L"../textures/posy.dds", L"../textures/negy.dds",
+            L"../textures/posx.dds", L"../textures/negx.dds",
             L"../textures/posz.dds", L"../textures/negz.dds"
         };
+
         TextureDesc texDescs[6];
         bool ddsRes = true;
+
         for (int i = 0; i < 6 && ddsRes; i++)
         {
             ddsRes = LoadDDS(TextureNames[i].c_str(), texDescs[i], true);
         }
 
-        textureFmt = texDescs[0].fmt; // Assume all are the same
+        textureFmt = texDescs[0].fmt;
 
         D3D11_TEXTURE2D_DESC desc = {};
         desc.Format = textureFmt;
@@ -1096,12 +1097,14 @@ HRESULT Renderer::InitCubemap()
         UINT32 pitch = blockWidth * GetBytesPerBlock(desc.Format);
 
         D3D11_SUBRESOURCE_DATA data[6];
+
         for (int i = 0; i < 6; i++)
         {
             data[i].pSysMem = texDescs[i].pData;
             data[i].SysMemPitch = pitch;
             data[i].SysMemSlicePitch = 0;
         }
+
         result = m_pDevice->CreateTexture2D(&desc, data, &m_pCubemapTexture);
         assert(SUCCEEDED(result));
       
@@ -1115,9 +1118,14 @@ HRESULT Renderer::InitCubemap()
 
         for (int i = 0; i < 6; i++)
         {
-            free(texDescs[i].pData);
+            if (texDescs[i].pData)
+            {
+                free(texDescs[i].pData);
+            }
         }
     }
+
+
     if (SUCCEEDED(result))
     {
         D3D11_SHADER_RESOURCE_VIEW_DESC desc;
@@ -1149,10 +1157,12 @@ void Renderer::RenderSphere()
     m_pDeviceContext->PSSetShaderResources(0, 1, resources);
 
     m_pDeviceContext->IASetIndexBuffer(m_pSphere->m_pSphereIndexBuffer, DXGI_FORMAT_R16_UINT, 0);
+
     ID3D11Buffer* vertexBuffers[] = { m_pSphere->m_pSphereVertexBuffer };
     UINT strides[] = { 12 };
     UINT offsets[] = { 0 };
     ID3D11Buffer* cbuffers[] = { m_pSceneBuffer, m_pSphere->m_pSphereGeomBuffer };
+
     m_pDeviceContext->IASetVertexBuffers(0, 1, vertexBuffers, strides, offsets);
     m_pDeviceContext->IASetInputLayout(m_pSphereInputLayout);
     m_pDeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);

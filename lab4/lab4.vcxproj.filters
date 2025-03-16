@@ -36,6 +36,12 @@
     <ClInclude Include="Sphere.h">
       <Filter>Файлы заголовков</Filter>
     </ClInclude>
+    <ClInclude Include="XMFLOAT3.h">
+      <Filter>Файлы заголовков</Filter>
+    </ClInclude>
+    <ClInclude Include="XMFLOAT4.h">
+      <Filter>Файлы заголовков</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="lab4.cpp">
@@ -67,9 +73,7 @@
   <ItemGroup>
     <CopyFileToFolders Include="PixelShader.hlsl" />
     <CopyFileToFolders Include="VertexShader.hlsl" />
-  </ItemGroup>
-  <ItemGroup>
-    <FxCompile Include="PixelSphereShader.hlsl" />
-    <FxCompile Include="VertexSphereShader.hlsl" />
+    <CopyFileToFolders Include="VertexSphereShader.hlsl" />
+    <CopyFileToFolders Include="PixelSphereShader.hlsl" />
   </ItemGroup>
 </Project>
