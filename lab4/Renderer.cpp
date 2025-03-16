@@ -2,6 +2,7 @@
 #include "framework.h"
 #include "Renderer.h"
 #include "DDS.h"
+#include "Sphere.h"
 
 const float Renderer::CameraRotationSpeed   = (float)M_PI * 2.0f;
 const float Renderer::CameraMovingSpeed     = (float)10.0f;
@@ -226,6 +227,13 @@ void Renderer::CleanupDevice()
         m_pSceneBuffer->Release();
         m_pSceneBuffer = nullptr;
     }
+
+    if (m_pSphere != nullptr)
+    {
+        m_pSphere->CleanupSphere();
+    }
+
+    delete m_pSphere;
 
 #ifdef _DEBUG
     if (m_pDevice != nullptr)
@@ -907,6 +915,76 @@ HRESULT Renderer::LoadTexture()
         result = m_pDevice->CreateShaderResourceView(m_pTexture, &desc, &m_pTextureView);
         assert(SUCCEEDED(result));
     }
+
+    return result;
+}
+
+HRESULT Renderer::InitSphere()
+{
+    static const D3D11_INPUT_ELEMENT_DESC InputDesc[] = {
+        {"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0}
+    };
+
+    HRESULT result = S_OK;
+    static const size_t SphereSteps = 32;
+
+    m_pSphere = new Sphere();
+
+    m_pSphere->GetSphereDataSize(SphereSteps);
+    m_pSphere->CreateSphere();
+
+    if (SUCCEEDED(result))
+    {
+        m_pSphere->CreateVertexBuffer(m_pDevice);
+    }
+
+    if (SUCCEEDED(result))
+    {
+        m_pSphere->CreateIndexBuffer(m_pDevice);
+    }
+
+    ID3DBlob* pSphereVertexShaderCode = nullptr;
+  
+    if (SUCCEEDED(result))
+    {
+        result = CreateShader(L"VertexSphereShader.hlsl", ShaderType::Vertex, (ID3D11DeviceChild**)&m_pSphereVertexShader, &pSphereVertexShaderCode);
+    }
+
+    if (SUCCEEDED(result))
+    {
+        result = CreateShader(L"PixelSphereShader.hlsl", ShaderType::Pixel, (ID3D11DeviceChild**)&m_pSpherePixelShader);
+    }
+
+    if (SUCCEEDED(result))
+    {
+        result = m_pDevice->CreateInputLayout(InputDesc, 1, pSphereVertexShaderCode->GetBufferPointer(), pSphereVertexShaderCode->GetBufferSize(), &m_pSphereInputLayout);
+  
+        if (SUCCEEDED(result))
+        {
+            std::string name = "SphereInputLayout";
+
+            result = m_pSphereInputLayout->SetPrivateData(WKPDID_D3DDebugObjectName,
+                (UINT)name.length(), name.c_str());
+        }
+    }
+
+    if (pSphereVertexShaderCode)
+    {
+        pSphereVertexShaderCode->Release();
+        pSphereVertexShaderCode = nullptr;
+    }
+
+    if (SUCCEEDED(result))
+    {
+        m_pSphere->CreateGeometryBuffer(m_pDevice);
+    }
+
+    return result;
+}
+
+HRESULT Renderer::InitCubmap()
+{
+    HRESULT result{};
 
     return result;
 }
