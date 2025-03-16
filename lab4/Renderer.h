@@ -44,18 +44,12 @@ struct GeomBuffer
 struct SceneBuffer
 {
     DirectX::XMMATRIX vp;
-};
-
-struct Point
-{
-    float x;
-    float y;
-    float z;
+    XMFLOAT4 cameraPos;
 };
 
 struct Camera
 {
-    Point poi;
+    XMFLOAT3 poi;
     float r;
     float phi;
     float theta;
