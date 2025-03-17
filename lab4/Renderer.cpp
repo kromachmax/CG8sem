@@ -1044,7 +1044,7 @@ HRESULT Renderer::LoadTexture()
 
         desc.Format = textureFmt;
         desc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
-        desc.Texture2D.MipLevels = 1;
+        desc.Texture2D.MipLevels = textureDesc.mipmapsCount;;
         desc.Texture2D.MostDetailedMip = 0;
 
         result = m_pDevice->CreateShaderResourceView(m_pTexture, &desc, &m_pTextureView);
