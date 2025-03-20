@@ -9,6 +9,26 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "lab2", "lab2\lab2.vcxproj",
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "lab3", "lab3\lab3.vcxproj", "{679F0CAD-A842-41A9-8B48-7935F511184F}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "lab4", "lab4\lab4.vcxproj", "{15388C3F-6766-4034-A06E-195DDE76851B}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Элементы решения", "Элементы решения", "{754FC069-D67B-A9D7-50A1-8D1CA196D8F1}"
+	ProjectSection(SolutionItems) = preProject
+		textures\bricks.dds = textures\bricks.dds
+		textures\design.dds = textures\design.dds
+		textures\negx.dds = textures\negx.dds
+		pictures\negx.jpg = pictures\negx.jpg
+		textures\negy.dds = textures\negy.dds
+		pictures\negy.jpg = pictures\negy.jpg
+		textures\negz.dds = textures\negz.dds
+		pictures\negz.jpg = pictures\negz.jpg
+		textures\posx.dds = textures\posx.dds
+		pictures\posx.jpg = pictures\posx.jpg
+		textures\posy.dds = textures\posy.dds
+		pictures\posy.jpg = pictures\posy.jpg
+		textures\posz.dds = textures\posz.dds
+		pictures\posz.jpg = pictures\posz.jpg
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -41,6 +61,14 @@ Global
 		{679F0CAD-A842-41A9-8B48-7935F511184F}.Release|x64.Build.0 = Release|x64
 		{679F0CAD-A842-41A9-8B48-7935F511184F}.Release|x86.ActiveCfg = Release|Win32
 		{679F0CAD-A842-41A9-8B48-7935F511184F}.Release|x86.Build.0 = Release|Win32
+		{15388C3F-6766-4034-A06E-195DDE76851B}.Debug|x64.ActiveCfg = Debug|x64
+		{15388C3F-6766-4034-A06E-195DDE76851B}.Debug|x64.Build.0 = Debug|x64
+		{15388C3F-6766-4034-A06E-195DDE76851B}.Debug|x86.ActiveCfg = Debug|Win32
+		{15388C3F-6766-4034-A06E-195DDE76851B}.Debug|x86.Build.0 = Debug|Win32
+		{15388C3F-6766-4034-A06E-195DDE76851B}.Release|x64.ActiveCfg = Release|x64
+		{15388C3F-6766-4034-A06E-195DDE76851B}.Release|x64.Build.0 = Release|x64
+		{15388C3F-6766-4034-A06E-195DDE76851B}.Release|x86.ActiveCfg = Release|Win32
+		{15388C3F-6766-4034-A06E-195DDE76851B}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
