@@ -72,6 +72,7 @@ public:
         , m_pVertexBuffer(nullptr)
         , m_pIndexBuffer(nullptr)
         , m_pGeomBuffer(nullptr)
+        , m_pGeomBuffer2(nullptr)
         , m_pSceneBuffer(nullptr)
         , m_prevUSec(0)
         , m_angle(0.0)
@@ -85,6 +86,9 @@ public:
         , m_pSphere(nullptr)
         , m_pCubemapTexture(nullptr)
         , m_pCubemapView(nullptr)
+        , m_pDepthBuffer(nullptr)
+        , m_pDepthStencilView(nullptr)
+        , m_pDepthState(nullptr)
     {
     }
 
@@ -117,6 +121,7 @@ private:
     HRESULT CreateGeomBuffer();
     HRESULT CreateSceneBuffer();
     HRESULT CreateSampler();
+    HRESULT CreateDepthState();
 
     HRESULT LoadTexture();
 
@@ -156,6 +161,11 @@ private:
     ID3D11Buffer* m_pIndexBuffer;
     ID3D11Buffer* m_pSceneBuffer;
     ID3D11Buffer* m_pGeomBuffer;
+    ID3D11Buffer* m_pGeomBuffer2;
+
+    ID3D11Texture2D* m_pDepthBuffer;
+    ID3D11DepthStencilView* m_pDepthStencilView;
+    ID3D11DepthStencilState* m_pDepthState;
 
     ID3D11PixelShader*  m_pPixelShader;
     ID3D11VertexShader* m_pVertexShader;
