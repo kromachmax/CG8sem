@@ -222,6 +222,12 @@ void Renderer::CleanupDevice()
         m_pGeomBuffer = nullptr;
     }
 
+    if (m_pGeomBuffer2)
+    {
+        m_pGeomBuffer2->Release();
+        m_pGeomBuffer2 = nullptr;
+    }
+
     if (m_pSceneBuffer)
     {
         m_pSceneBuffer->Release();
@@ -276,6 +282,24 @@ void Renderer::CleanupDevice()
         m_pCubemapView = nullptr;
     }
 
+    if (m_pDepthBuffer)
+    {
+        m_pDepthBuffer->Release();
+        m_pDepthBuffer = nullptr;
+    }
+
+    if (m_pDepthStencilView)
+    {
+        m_pDepthStencilView->Release();
+        m_pDepthStencilView = nullptr;
+    }
+
+    if (m_pDepthState)
+    {
+        m_pDepthState->Release();
+        m_pDepthState = nullptr;
+    }
+
     if (m_pSphere != nullptr)
     {
         m_pSphere->CleanupSphere();
@@ -320,10 +344,11 @@ bool Renderer::Render()
     m_pDeviceContext->ClearState();
 
     ID3D11RenderTargetView* views[] = { m_pBackBufferRTV };
-    m_pDeviceContext->OMSetRenderTargets(1, views, nullptr);
+    m_pDeviceContext->OMSetRenderTargets(1, views, m_pDepthStencilView);
 
     static const FLOAT BackColor[4] = { 0.0f, 0.0f, 0.25f, 1.0f };
     m_pDeviceContext->ClearRenderTargetView(m_pBackBufferRTV, BackColor);
+    m_pDeviceContext->ClearDepthStencilView(m_pDepthStencilView, D3D11_CLEAR_DEPTH, 1.0f, 0);
 
     D3D11_VIEWPORT viewport{};
     viewport.TopLeftX = 0;
@@ -342,8 +367,7 @@ bool Renderer::Render()
     rect.bottom = m_height;
 
     m_pDeviceContext->RSSetScissorRects(1, &rect);
-
-    RenderSphere();
+    m_pDeviceContext->OMSetDepthStencilState(m_pDepthState, 0);
 
     ID3D11SamplerState* samplers[] = { m_pSampler };
     m_pDeviceContext->PSSetSamplers(0, 1, samplers);
@@ -368,7 +392,12 @@ bool Renderer::Render()
     m_pDeviceContext->PSSetShader(m_pPixelShader, nullptr, 0);
     m_pDeviceContext->DrawIndexed(36, 0, 0);
 
+    ID3D11Buffer* cbuffers2[] = { m_pGeomBuffer2 };
+    m_pDeviceContext->VSSetConstantBuffers(1, 1, cbuffers2);
+    m_pDeviceContext->DrawIndexed(36, 0, 0);
 
+
+    RenderSphere();
 
     HRESULT result = m_pSwapChain->Present(0, 0);
     assert(SUCCEEDED(result));
@@ -398,6 +427,12 @@ bool Renderer::Update()
     geomBuffer.m = m;
 
     m_pDeviceContext->UpdateSubresource(m_pGeomBuffer, 0, nullptr, &geomBuffer, 0, 0);
+
+    m = DirectX::XMMatrixTranslation(2.0f, 0.0f, 0.0f);
+
+    geomBuffer.m = m;
+
+    m_pDeviceContext->UpdateSubresource(m_pGeomBuffer2, 0, nullptr, &geomBuffer, 0, 0);
 
     UpdateCamera(deltaSec);
 
@@ -457,6 +492,18 @@ bool Renderer::Resize(UINT width, UINT height)
     {
         m_pBackBufferRTV->Release();
 
+        if (m_pDepthBuffer)
+    {
+        m_pDepthBuffer->Release();
+        m_pDepthBuffer = nullptr;
+    }
+
+    if (m_pDepthStencilView)
+    {
+        m_pDepthStencilView->Release();
+        m_pDepthStencilView = nullptr;
+    }
+
         HRESULT result = m_pSwapChain->ResizeBuffers(2, width, height, DXGI_FORMAT_R8G8B8A8_UNORM, 0);
 
         assert(SUCCEEDED(result));
@@ -491,6 +538,49 @@ HRESULT Renderer::SetupBackBuffer()
 
         pBackBuffer->Release();
     }
+
+    if (SUCCEEDED(result))
+    {
+        D3D11_TEXTURE2D_DESC desc{};
+
+        desc.Format             = DXGI_FORMAT_D32_FLOAT;
+        desc.ArraySize          = 1;
+        desc.BindFlags          = D3D11_BIND_DEPTH_STENCIL;
+        desc.CPUAccessFlags     = 0;
+        desc.MiscFlags          = 0;
+        desc.SampleDesc.Count   = 1;
+        desc.SampleDesc.Quality = 0;
+        desc.Usage              = D3D11_USAGE_DEFAULT;
+        desc.Height             = m_height;
+        desc.Width              = m_width;
+        desc.MipLevels          = 1;
+
+        result = m_pDevice->CreateTexture2D(&desc, nullptr, &m_pDepthBuffer);
+     
+        if (SUCCEEDED(result))
+        {
+            std::string name = "DepthBuffer";
+
+            result = m_pDepthBuffer->SetPrivateData(WKPDID_D3DDebugObjectName,
+                (UINT)name.length(), name.c_str());
+        }
+
+    }
+    if (SUCCEEDED(result))
+    {
+        result = m_pDevice->CreateDepthStencilView(m_pDepthBuffer, nullptr, &m_pDepthStencilView);
+    
+        if (SUCCEEDED(result))
+        {
+            std::string name = "DepthBufferView";
+
+            result = m_pDepthStencilView->SetPrivateData(WKPDID_D3DDebugObjectName,
+                (UINT)name.length(), name.c_str());
+        }
+
+    }
+
+    assert(SUCCEEDED(result));
 
     return result;
 }
@@ -548,6 +638,11 @@ HRESULT Renderer::InitScene()
     if (SUCCEEDED(result))
     {
         result = CreateSceneBuffer();
+    }
+
+    if (SUCCEEDED(result))
+    {
+        result = CreateDepthState();
     }
 
     if (SUCCEEDED(result))
@@ -925,6 +1020,17 @@ HRESULT Renderer::CreateGeomBuffer()
             (UINT)name.length(), name.c_str());
     }
 
+    result = m_pDevice->CreateBuffer(&desc, &data, &m_pGeomBuffer2);
+    assert(SUCCEEDED(result));
+
+    if (SUCCEEDED(result))
+    {
+        std::string name = "m_pGeomBuffer2";
+
+        result = m_pGeomBuffer2->SetPrivateData(WKPDID_D3DDebugObjectName,
+            (UINT)name.length(), name.c_str());
+    }
+
     return result;
 }
 
@@ -975,6 +1081,29 @@ HRESULT Renderer::CreateSampler()
     result = m_pDevice->CreateSamplerState(&desc, &m_pSampler);
     assert(SUCCEEDED(result));
     
+    return result;
+}
+
+HRESULT Renderer::CreateDepthState()
+{
+    HRESULT result{};
+
+    D3D11_DEPTH_STENCIL_DESC desc = {};
+    desc.DepthEnable = TRUE;
+    desc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
+    desc.DepthFunc = D3D11_COMPARISON_LESS_EQUAL;
+    desc.StencilEnable = FALSE;
+
+    result = m_pDevice->CreateDepthStencilState(&desc, &m_pDepthState);
+
+    if (SUCCEEDED(result))
+    {
+        std::string name = "DepthState";
+
+        result = m_pDepthState->SetPrivateData(WKPDID_D3DDebugObjectName,
+            (UINT)name.length(), name.c_str());
+    }
+
     return result;
 }
 

@@ -23,8 +23,8 @@ void Sphere::CreateSphere()
         for (size_t lon = 0; lon < SphereSteps + 1; lon++)
         {
             int index = (int)(lat * (SphereSteps + 1) + lon);
-            float lonAngle = 2.0f * (float)M_PI * lon / SphereSteps + (float)M_PI;
-            float latAngle = -(float)M_PI / 2 + (float)M_PI * lat / SphereSteps;
+            float lonAngle = 2.0f * (float)M_PI * lon / SphereSteps;  // долгота(фи)
+            float latAngle = -(float)M_PI / 2 + (float)M_PI * lat / SphereSteps; // широта(тета)
 
             XMFLOAT3 r = XMFLOAT3{
                 sinf(lonAngle) * cosf(latAngle),
@@ -127,7 +127,7 @@ HRESULT Sphere::CreateGeometryBuffer(ID3D11Device* m_pDevice)
 
     SphereGeomBuffer geomBuffer;
     geomBuffer.m = DirectX::XMMatrixIdentity();
-    geomBuffer.size.x = 2.0f;
+    geomBuffer.size.x = 50.0f;
 
     D3D11_SUBRESOURCE_DATA data;
     data.pSysMem = &geomBuffer;
