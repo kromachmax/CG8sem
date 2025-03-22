@@ -445,7 +445,7 @@ bool Renderer::Render()
 
     //RenderSphere();
 
-    RenderRectangle();
+    RenderRectangles();
 
     HRESULT result = m_pSwapChain->Present(0, 0);
     assert(SUCCEEDED(result));
@@ -1396,15 +1396,16 @@ HRESULT Renderer::InitRect()
     HRESULT result = S_OK;
 
     m_pRect = new RECTANGLE::Rectangle();
+    m_pRect2 = new RECTANGLE::Rectangle();
 
     if (SUCCEEDED(result))
     {
-        result = m_pRect->CreateVertexBuffer(m_pDevice);
+        result = RECTANGLE::Rectangle::CreateVertexBuffer(m_pDevice);
     }
 
     if (SUCCEEDED(result))
     {
-        result = m_pRect->CreateIndexBuffer(m_pDevice);
+        result = RECTANGLE::Rectangle::CreateIndexBuffer(m_pDevice);
     }
 
 
@@ -1445,7 +1446,13 @@ HRESULT Renderer::InitRect()
         RECTANGLE::RectGeomBuffer geomBuffer;
         geomBuffer.m = DirectX::XMMatrixTranslation(1.0f, 0, 0);
         geomBuffer.color = XMFLOAT4{ 0.5f, 0, 0.5f, 1.0f };
-        m_pRect->CreateGeometryBuffer(m_pDevice, "RectGeomBuffer", geomBuffer);
+        HRESULT hr1 = m_pRect->CreateGeometryBuffer(m_pDevice, "RectGeomBuffer", geomBuffer);
+
+        geomBuffer.m = DirectX::XMMatrixTranslation(1.2f, 0, 0);
+        geomBuffer.color = XMFLOAT4{ 0.0f, 0.5f, 0.0f, 1.0f };
+        HRESULT hr2 = m_pRect2->CreateGeometryBuffer(m_pDevice, "RectGeomBuffer2", geomBuffer);
+
+        result = SUCCEEDED(hr1) && SUCCEEDED(hr2) ? S_OK : E_FAIL;
     }
 
     return result;
@@ -1570,17 +1577,18 @@ void Renderer::RenderSphere()
     m_pDeviceContext->DrawIndexed(m_pSphere->m_sphereIndexCount, 0, 0);
 }
 
-void Renderer::RenderRectangle()
+void Renderer::RenderRectangles()
 {
     m_pDeviceContext->OMSetDepthStencilState(m_pTransDepthState, 0);
 
     m_pDeviceContext->OMSetBlendState(m_pTransBlendState, nullptr, 0xFFFFFFFF);
 
-    m_pDeviceContext->IASetIndexBuffer(m_pRect->GetIndexBuffer(), DXGI_FORMAT_R16_UINT, 0);
     ID3D11Buffer* vertexBuffers[] = { m_pRect->GetVertexBuffer()};
     UINT strides[] = { 16 };
     UINT offsets[] = { 0 };
     ID3D11Buffer* cbuffers[] = { m_pSceneBuffer, m_pRect->GetGeomBuffer()};
+
+    m_pDeviceContext->IASetIndexBuffer(m_pRect->GetIndexBuffer(), DXGI_FORMAT_R16_UINT, 0);
     m_pDeviceContext->IASetVertexBuffers(0, 1, vertexBuffers, strides, offsets);
     m_pDeviceContext->IASetInputLayout(m_pRectInputLayout);
     m_pDeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
@@ -1588,6 +1596,15 @@ void Renderer::RenderRectangle()
     m_pDeviceContext->VSSetConstantBuffers(0, 2, cbuffers);
     m_pDeviceContext->PSSetConstantBuffers(0, 2, cbuffers);
     m_pDeviceContext->PSSetShader(m_pRectPixelShader, nullptr, 0);
+    m_pDeviceContext->DrawIndexed(6, 0, 0);
+
+    vertexBuffers[0] = m_pRect2->GetVertexBuffer();
+    cbuffers[1] = m_pRect2->GetGeomBuffer();
+
+
+    m_pDeviceContext->IASetIndexBuffer(m_pRect2->GetIndexBuffer(), DXGI_FORMAT_R16_UINT, 0);
+    m_pDeviceContext->VSSetConstantBuffers(0, 2, cbuffers);
+    m_pDeviceContext->PSSetConstantBuffers(0, 2, cbuffers);
     m_pDeviceContext->DrawIndexed(6, 0, 0);
 }
 

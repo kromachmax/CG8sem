@@ -17,10 +17,12 @@ const UINT16 RECTANGLE::Rectangle::Indices[] = {
     0, 2, 3
 };
 
+ID3D11Buffer* RECTANGLE::Rectangle::m_pRectangleVertexBuffer = nullptr;
+
+ID3D11Buffer* RECTANGLE::Rectangle::m_pRectangleIndexBuffer = nullptr;
+
 RECTANGLE::Rectangle::Rectangle()
     : m_pRectangleGeomBuffer(nullptr)
-    , m_pRectangleVertexBuffer(nullptr)
-    , m_pRectangleIndexBuffer(nullptr)
 {
 }
 

@@ -91,6 +91,7 @@ public:
         , m_pRectVertexShader(nullptr)
         , m_pRectInputLayout(nullptr)
         , m_pRasterState(nullptr)
+        , m_pRect2(nullptr)
     {
     }
 
@@ -135,7 +136,7 @@ private:
     HRESULT InitCubemap();
 
     void RenderSphere();
-    void RenderRectangle();
+    void RenderRectangles();
 
 private:
 
@@ -198,6 +199,7 @@ private:
 
 
     RECTANGLE::Rectangle* m_pRect;
+    RECTANGLE::Rectangle* m_pRect2;
     Sphere*               m_pSphere;
 
     ID3D11Texture2D* m_pCubemapTexture;

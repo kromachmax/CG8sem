@@ -40,15 +40,15 @@ namespace RECTANGLE
 
         Rectangle();
 
-        HRESULT CreateVertexBuffer(ID3D11Device* m_pDevice);
-        HRESULT CreateIndexBuffer(ID3D11Device* m_pDevice);
+        static HRESULT CreateVertexBuffer(ID3D11Device* m_pDevice);
+        static HRESULT CreateIndexBuffer(ID3D11Device* m_pDevice);
         HRESULT CreateGeometryBuffer(ID3D11Device* m_pDevice, const std::string& name, const RectGeomBuffer& buffer);
 
         void CleanupRectangle();
 
         ID3D11Buffer* GetGeomBuffer() { return m_pRectangleGeomBuffer; };
-        ID3D11Buffer* GetIndexBuffer() { return m_pRectangleIndexBuffer; };
-        ID3D11Buffer* GetVertexBuffer() { return m_pRectangleVertexBuffer; };
+        static ID3D11Buffer* GetIndexBuffer() { return m_pRectangleIndexBuffer; };
+        static ID3D11Buffer* GetVertexBuffer() { return m_pRectangleVertexBuffer; };
 
 
         static const D3D11_INPUT_ELEMENT_DESC InputDesc[];
@@ -58,8 +58,8 @@ namespace RECTANGLE
     private:
 
         ID3D11Buffer* m_pRectangleGeomBuffer;
-        ID3D11Buffer* m_pRectangleVertexBuffer;
-        ID3D11Buffer* m_pRectangleIndexBuffer;
+        static ID3D11Buffer* m_pRectangleVertexBuffer;
+        static ID3D11Buffer* m_pRectangleIndexBuffer;
 	};
 }
 
