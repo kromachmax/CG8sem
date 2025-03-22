@@ -114,6 +114,14 @@ HRESULT RECTANGLE::Rectangle::CreateGeometryBuffer(ID3D11Device* m_pDevice, cons
             (UINT)name.length(), name.c_str());
     }
 
+    DirectX::XMVECTOR translation = geomBuffer.m.r[3];
+
+    float offsetX = DirectX::XMVectorGetX(translation);
+    float offsetY = DirectX::XMVectorGetY(translation);
+    float offsetZ = DirectX::XMVectorGetZ(translation);
+
+    p_mCenterCoordinate = { offsetX, offsetY, offsetZ };
+
     return result;
 }
 
@@ -136,4 +144,9 @@ void RECTANGLE::Rectangle::CleanupRectangle()
         m_pRectangleIndexBuffer->Release();
         m_pRectangleIndexBuffer = nullptr;
     }
+}
+
+XMFLOAT3 RECTANGLE::Rectangle::GetCenterCoordinate()
+{
+    return p_mCenterCoordinate;
 }

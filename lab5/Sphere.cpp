@@ -127,7 +127,7 @@ HRESULT Sphere::CreateGeometryBuffer(ID3D11Device* m_pDevice)
 
     SphereGeomBuffer geomBuffer;
     geomBuffer.m = DirectX::XMMatrixIdentity();
-    geomBuffer.size.x = 50.0f;
+    geomBuffer.size.x = 1.0f;
 
     D3D11_SUBRESOURCE_DATA data;
     data.pSysMem = &geomBuffer;

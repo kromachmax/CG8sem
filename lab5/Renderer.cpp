@@ -443,7 +443,7 @@ bool Renderer::Render()
     m_pDeviceContext->VSSetConstantBuffers(1, 1, cbuffers2);
     m_pDeviceContext->DrawIndexed(36, 0, 0);
 
-    //RenderSphere();
+    RenderSphere();
 
     RenderRectangles();
 
@@ -1583,29 +1583,59 @@ void Renderer::RenderRectangles()
 
     m_pDeviceContext->OMSetBlendState(m_pTransBlendState, nullptr, 0xFFFFFFFF);
 
-    ID3D11Buffer* vertexBuffers[] = { m_pRect->GetVertexBuffer()};
+    ID3D11Buffer* vertexBuffers[] = { RECTANGLE::Rectangle::GetVertexBuffer()};
     UINT strides[] = { 16 };
     UINT offsets[] = { 0 };
-    ID3D11Buffer* cbuffers[] = { m_pSceneBuffer, m_pRect->GetGeomBuffer()};
+    ID3D11Buffer* cbuffers[] = { m_pSceneBuffer, nullptr };
 
-    m_pDeviceContext->IASetIndexBuffer(m_pRect->GetIndexBuffer(), DXGI_FORMAT_R16_UINT, 0);
+    m_pDeviceContext->IASetIndexBuffer(RECTANGLE::Rectangle::GetIndexBuffer(), DXGI_FORMAT_R16_UINT, 0);
     m_pDeviceContext->IASetVertexBuffers(0, 1, vertexBuffers, strides, offsets);
     m_pDeviceContext->IASetInputLayout(m_pRectInputLayout);
     m_pDeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
     m_pDeviceContext->VSSetShader(m_pRectVertexShader, nullptr, 0);
-    m_pDeviceContext->VSSetConstantBuffers(0, 2, cbuffers);
-    m_pDeviceContext->PSSetConstantBuffers(0, 2, cbuffers);
     m_pDeviceContext->PSSetShader(m_pRectPixelShader, nullptr, 0);
-    m_pDeviceContext->DrawIndexed(6, 0, 0);
 
-    vertexBuffers[0] = m_pRect2->GetVertexBuffer();
-    cbuffers[1] = m_pRect2->GetGeomBuffer();
+    XMFLOAT3 cameraPos;
+    XMFLOAT3 rectPos;
+    XMFLOAT3 rect2Pos;
+    
+    float posX = m_camera.poi.x + cosf(m_camera.theta) * cosf(m_camera.phi) * m_camera.r;
+    float posY = m_camera.poi.y + sinf(m_camera.theta) * m_camera.r;
+    float posZ = m_camera.poi.z + cosf(m_camera.theta) * sinf(m_camera.phi) * m_camera.r;
 
+    cameraPos = { posX, posY, posZ };
+    rectPos = m_pRect->GetCenterCoordinate();
+    rect2Pos = m_pRect2->GetCenterCoordinate();
 
-    m_pDeviceContext->IASetIndexBuffer(m_pRect2->GetIndexBuffer(), DXGI_FORMAT_R16_UINT, 0);
-    m_pDeviceContext->VSSetConstantBuffers(0, 2, cbuffers);
-    m_pDeviceContext->PSSetConstantBuffers(0, 2, cbuffers);
-    m_pDeviceContext->DrawIndexed(6, 0, 0);
+    if ((cameraPos - rectPos).LengthSquared() < (cameraPos - rect2Pos).LengthSquared())
+    {
+        cbuffers[1] = m_pRect2->GetGeomBuffer();
+
+        m_pDeviceContext->VSSetConstantBuffers(0, 2, cbuffers);
+        m_pDeviceContext->PSSetConstantBuffers(0, 2, cbuffers);
+        m_pDeviceContext->DrawIndexed(6, 0, 0);
+
+        cbuffers[1] = m_pRect->GetGeomBuffer();
+
+        m_pDeviceContext->VSSetConstantBuffers(0, 2, cbuffers);
+        m_pDeviceContext->PSSetConstantBuffers(0, 2, cbuffers);
+        m_pDeviceContext->DrawIndexed(6, 0, 0);
+    }
+    else
+    {
+        cbuffers[1] = m_pRect->GetGeomBuffer();
+
+        m_pDeviceContext->VSSetConstantBuffers(0, 2, cbuffers);
+        m_pDeviceContext->PSSetConstantBuffers(0, 2, cbuffers);
+        m_pDeviceContext->DrawIndexed(6, 0, 0);
+
+        cbuffers[1] = m_pRect2->GetGeomBuffer();
+
+        m_pDeviceContext->VSSetConstantBuffers(0, 2, cbuffers);
+        m_pDeviceContext->PSSetConstantBuffers(0, 2, cbuffers);
+        m_pDeviceContext->DrawIndexed(6, 0, 0);
+    }
+
 }
 
 

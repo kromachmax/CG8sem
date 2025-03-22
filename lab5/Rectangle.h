@@ -49,6 +49,8 @@ namespace RECTANGLE
         ID3D11Buffer* GetGeomBuffer() { return m_pRectangleGeomBuffer; };
         static ID3D11Buffer* GetIndexBuffer() { return m_pRectangleIndexBuffer; };
         static ID3D11Buffer* GetVertexBuffer() { return m_pRectangleVertexBuffer; };
+        
+        XMFLOAT3 GetCenterCoordinate();
 
 
         static const D3D11_INPUT_ELEMENT_DESC InputDesc[];
@@ -60,6 +62,8 @@ namespace RECTANGLE
         ID3D11Buffer* m_pRectangleGeomBuffer;
         static ID3D11Buffer* m_pRectangleVertexBuffer;
         static ID3D11Buffer* m_pRectangleIndexBuffer;
+
+        XMFLOAT3 p_mCenterCoordinate;
 	};
 }
 
