@@ -46,6 +46,11 @@ namespace RECTANGLE
 
         void CleanupRectangle();
 
+        ID3D11Buffer* GetGeomBuffer() { return m_pRectangleGeomBuffer; };
+        ID3D11Buffer* GetIndexBuffer() { return m_pRectangleIndexBuffer; };
+        ID3D11Buffer* GetVertexBuffer() { return m_pRectangleVertexBuffer; };
+
+
         static const D3D11_INPUT_ELEMENT_DESC InputDesc[];
         static const VertexRect Vertices[];
         static const UINT16 Indices[];

@@ -90,6 +90,7 @@ public:
         , m_pRectPixelShader(nullptr)
         , m_pRectVertexShader(nullptr)
         , m_pRectInputLayout(nullptr)
+        , m_pRasterState(nullptr)
     {
     }
 
@@ -125,6 +126,7 @@ private:
     HRESULT CreateDepthState();
     HRESULT CreateTPDepthState();
     HRESULT CreateBlendState();
+    HRESULT CreateRasterizerState();
 
     HRESULT LoadTexture();
 
@@ -133,6 +135,7 @@ private:
     HRESULT InitCubemap();
 
     void RenderSphere();
+    void RenderRectangle();
 
 private:
 
@@ -199,5 +202,7 @@ private:
 
     ID3D11Texture2D* m_pCubemapTexture;
     ID3D11ShaderResourceView* m_pCubemapView;
+
+    ID3D11RasterizerState* m_pRasterState;
 };
 

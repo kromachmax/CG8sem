@@ -329,6 +329,12 @@ void Renderer::CleanupDevice()
         m_pRectInputLayout = nullptr;
     }
 
+    if (m_pRasterState)
+    {
+        m_pRasterState->Release();
+        m_pRasterState = nullptr;
+    }
+
     if (m_pSphere != nullptr)
     {
         m_pSphere->CleanupSphere();
@@ -384,7 +390,7 @@ bool Renderer::Render()
 
     static const FLOAT BackColor[4] = { 0.0f, 0.0f, 0.25f, 1.0f };
     m_pDeviceContext->ClearRenderTargetView(m_pBackBufferRTV, BackColor);
-    m_pDeviceContext->ClearDepthStencilView(m_pDepthStencilView, D3D11_CLEAR_DEPTH, 1.0f, 0);
+    m_pDeviceContext->ClearDepthStencilView(m_pDepthStencilView, D3D11_CLEAR_DEPTH, 0.0f, 0);
 
     D3D11_VIEWPORT viewport{};
     viewport.TopLeftX = 0;
@@ -403,7 +409,12 @@ bool Renderer::Render()
     rect.bottom = m_height;
 
     m_pDeviceContext->RSSetScissorRects(1, &rect);
+
+    m_pDeviceContext->RSSetState(m_pRasterState);
+
     m_pDeviceContext->OMSetDepthStencilState(m_pDepthState, 0);
+
+    m_pDeviceContext->OMSetBlendState(m_pTransBlendState, nullptr, 0xFFFFFFFF);
 
     ID3D11SamplerState* samplers[] = { m_pSampler };
     m_pDeviceContext->PSSetSamplers(0, 1, samplers);
@@ -432,8 +443,9 @@ bool Renderer::Render()
     m_pDeviceContext->VSSetConstantBuffers(1, 1, cbuffers2);
     m_pDeviceContext->DrawIndexed(36, 0, 0);
 
+    //RenderSphere();
 
-    RenderSphere();
+    RenderRectangle();
 
     HRESULT result = m_pSwapChain->Present(0, 0);
     assert(SUCCEEDED(result));
@@ -502,7 +514,7 @@ bool Renderer::Update()
     float fov = (float)M_PI / 3;
     float c = 1.0f / tanf(fov / 2);
     float aspectRatio = (float)m_height / m_width;
-    DirectX::XMMATRIX p = DirectX::XMMatrixPerspectiveLH(tanf(fov / 2) * 2 * n, tanf(fov / 2) * 2 * n * aspectRatio, n, f);
+    DirectX::XMMATRIX p = DirectX::XMMatrixPerspectiveLH(tanf(fov / 2) * 2 * f, tanf(fov / 2) * 2 * f * aspectRatio, f, n);
 
     D3D11_MAPPED_SUBRESOURCE subresource;
     HRESULT result = m_pDeviceContext->Map(m_pSceneBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &subresource);
@@ -665,6 +677,10 @@ HRESULT Renderer::InitScene()
 
     pVertexShaderCode->Release();
 
+    if (SUCCEEDED(result))
+    {
+        result = CreateRasterizerState();
+    }
 
     if (SUCCEEDED(result))
     {
@@ -1145,7 +1161,7 @@ HRESULT Renderer::CreateDepthState()
     D3D11_DEPTH_STENCIL_DESC desc = {};
     desc.DepthEnable = TRUE;
     desc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
-    desc.DepthFunc = D3D11_COMPARISON_LESS_EQUAL;
+    desc.DepthFunc = D3D11_COMPARISON_GREATER_EQUAL;
     desc.StencilEnable = FALSE;
 
     result = m_pDevice->CreateDepthStencilState(&desc, &m_pDepthState);
@@ -1167,8 +1183,8 @@ HRESULT Renderer::CreateTPDepthState()
 
     D3D11_DEPTH_STENCIL_DESC desc = {};
     desc.DepthEnable = TRUE;
-    desc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ZERO;
-    desc.DepthFunc = D3D11_COMPARISON_GREATER;
+    desc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
+    desc.DepthFunc = D3D11_COMPARISON_GREATER_EQUAL;
     desc.StencilEnable = FALSE;
 
     result = m_pDevice->CreateDepthStencilState(&desc, &m_pTransDepthState);
@@ -1207,6 +1223,28 @@ HRESULT Renderer::CreateBlendState()
         std::string name = "TransBlendState";
 
         result = m_pTransBlendState->SetPrivateData(WKPDID_D3DDebugObjectName,
+            (UINT)name.length(), name.c_str());
+    }
+
+    return result;
+}
+
+HRESULT Renderer::CreateRasterizerState()
+{
+    HRESULT result{};
+
+    D3D11_RASTERIZER_DESC rasterDesc = {};
+    rasterDesc.FillMode = D3D11_FILL_SOLID;
+    rasterDesc.CullMode = D3D11_CULL_NONE;
+    rasterDesc.FrontCounterClockwise = FALSE;
+
+    result = m_pDevice->CreateRasterizerState(&rasterDesc, &m_pRasterState);
+
+    if (SUCCEEDED(result))
+    {
+        std::string name = "RasterState";
+
+        result = m_pRasterState->SetPrivateData(WKPDID_D3DDebugObjectName,
             (UINT)name.length(), name.c_str());
     }
 
@@ -1530,6 +1568,27 @@ void Renderer::RenderSphere()
     m_pDeviceContext->VSSetConstantBuffers(0, 2, cbuffers);
     m_pDeviceContext->PSSetShader(m_pSpherePixelShader, nullptr, 0);
     m_pDeviceContext->DrawIndexed(m_pSphere->m_sphereIndexCount, 0, 0);
+}
+
+void Renderer::RenderRectangle()
+{
+    m_pDeviceContext->OMSetDepthStencilState(m_pTransDepthState, 0);
+
+    m_pDeviceContext->OMSetBlendState(m_pTransBlendState, nullptr, 0xFFFFFFFF);
+
+    m_pDeviceContext->IASetIndexBuffer(m_pRect->GetIndexBuffer(), DXGI_FORMAT_R16_UINT, 0);
+    ID3D11Buffer* vertexBuffers[] = { m_pRect->GetVertexBuffer()};
+    UINT strides[] = { 16 };
+    UINT offsets[] = { 0 };
+    ID3D11Buffer* cbuffers[] = { m_pSceneBuffer, m_pRect->GetGeomBuffer()};
+    m_pDeviceContext->IASetVertexBuffers(0, 1, vertexBuffers, strides, offsets);
+    m_pDeviceContext->IASetInputLayout(m_pRectInputLayout);
+    m_pDeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+    m_pDeviceContext->VSSetShader(m_pRectVertexShader, nullptr, 0);
+    m_pDeviceContext->VSSetConstantBuffers(0, 2, cbuffers);
+    m_pDeviceContext->PSSetConstantBuffers(0, 2, cbuffers);
+    m_pDeviceContext->PSSetShader(m_pRectPixelShader, nullptr, 0);
+    m_pDeviceContext->DrawIndexed(6, 0, 0);
 }
 
 
