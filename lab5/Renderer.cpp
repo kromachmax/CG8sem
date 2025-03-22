@@ -2,7 +2,6 @@
 #include "framework.h"
 #include "Renderer.h"
 #include "DDS.h"
-#include "Sphere.h"
 
 const float Renderer::CameraRotationSpeed   = (float)M_PI * 2.0f;
 const float Renderer::CameraMovingSpeed     = (float)10.0f;
@@ -300,12 +299,49 @@ void Renderer::CleanupDevice()
         m_pDepthState = nullptr;
     }
 
+    if (m_pTransDepthState)
+    {
+        m_pTransDepthState->Release();
+        m_pTransDepthState = nullptr;
+    }
+
+    if (m_pTransBlendState)
+    {
+        m_pTransBlendState->Release();
+        m_pTransBlendState = nullptr;
+    }
+
+    if (m_pRectPixelShader)
+    {
+        m_pRectPixelShader->Release();
+        m_pRectPixelShader = nullptr;
+    }
+
+    if (m_pRectVertexShader)
+    {
+        m_pRectVertexShader->Release();
+        m_pRectVertexShader = nullptr;
+    }
+
+    if (m_pRectInputLayout)
+    {
+        m_pRectInputLayout->Release();
+        m_pRectInputLayout = nullptr;
+    }
+
     if (m_pSphere != nullptr)
     {
         m_pSphere->CleanupSphere();
     }
 
     delete m_pSphere;
+
+    if (m_pRect != nullptr)
+    {
+        m_pRect->CleanupRectangle();
+    }
+
+    delete m_pRect;
 
 #ifdef _DEBUG
     if (m_pDevice != nullptr)
@@ -642,7 +678,17 @@ HRESULT Renderer::InitScene()
 
     if (SUCCEEDED(result))
     {
+        result = CreateBlendState();
+    }
+
+    if (SUCCEEDED(result))
+    {
         result = CreateDepthState();
+    }
+
+    if (SUCCEEDED(result))
+    {
+        result = CreateTPDepthState();
     }
 
     if (SUCCEEDED(result))
@@ -660,6 +706,14 @@ HRESULT Renderer::InitScene()
         result = InitSphere();
         assert(SUCCEEDED(result));
     }
+
+    if (SUCCEEDED(result))
+    {
+        result = InitRect();
+        assert(SUCCEEDED(result));
+    }
+
+
     if (SUCCEEDED(result))
     {
         result = InitCubemap();
@@ -1107,6 +1161,58 @@ HRESULT Renderer::CreateDepthState()
     return result;
 }
 
+HRESULT Renderer::CreateTPDepthState()
+{
+    HRESULT result;
+
+    D3D11_DEPTH_STENCIL_DESC desc = {};
+    desc.DepthEnable = TRUE;
+    desc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ZERO;
+    desc.DepthFunc = D3D11_COMPARISON_GREATER;
+    desc.StencilEnable = FALSE;
+
+    result = m_pDevice->CreateDepthStencilState(&desc, &m_pTransDepthState);
+
+    if (SUCCEEDED(result))
+    {
+        std::string name = "TransDepthState";
+
+        result = m_pTransDepthState->SetPrivateData(WKPDID_D3DDebugObjectName,
+            (UINT)name.length(), name.c_str());
+    }
+
+    return result;
+}
+
+HRESULT Renderer::CreateBlendState()
+{
+    HRESULT result;
+
+    D3D11_BLEND_DESC desc = {};
+    desc.AlphaToCoverageEnable = false;
+    desc.IndependentBlendEnable = false;
+    desc.RenderTarget[0].BlendEnable = true;
+    desc.RenderTarget[0].BlendOp = D3D11_BLEND_OP_ADD;
+    desc.RenderTarget[0].DestBlend = D3D11_BLEND_INV_SRC_ALPHA;
+    desc.RenderTarget[0].SrcBlend = D3D11_BLEND_SRC_ALPHA;
+    desc.RenderTarget[0].RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
+    desc.RenderTarget[0].BlendOpAlpha = D3D11_BLEND_OP_ADD;
+    desc.RenderTarget[0].DestBlendAlpha = D3D11_BLEND_ZERO;
+    desc.RenderTarget[0].SrcBlendAlpha = D3D11_BLEND_ONE;
+
+    result = m_pDevice->CreateBlendState(&desc, &m_pTransBlendState);
+
+    if (SUCCEEDED(result))
+    {
+        std::string name = "TransBlendState";
+
+        result = m_pTransBlendState->SetPrivateData(WKPDID_D3DDebugObjectName,
+            (UINT)name.length(), name.c_str());
+    }
+
+    return result;
+}
+
 
 HRESULT Renderer::LoadTexture()
 {
@@ -1242,6 +1348,66 @@ HRESULT Renderer::InitSphere()
     if (SUCCEEDED(result))
     {
         m_pSphere->CreateGeometryBuffer(m_pDevice);
+    }
+
+    return result;
+}
+
+HRESULT Renderer::InitRect()
+{
+    HRESULT result = S_OK;
+
+    m_pRect = new RECTANGLE::Rectangle();
+
+    if (SUCCEEDED(result))
+    {
+        result = m_pRect->CreateVertexBuffer(m_pDevice);
+    }
+
+    if (SUCCEEDED(result))
+    {
+        result = m_pRect->CreateIndexBuffer(m_pDevice);
+    }
+
+
+    ID3DBlob* pRectangleVertexShaderCode = nullptr;
+
+    if (SUCCEEDED(result))
+    {
+        result = CreateShader(L"VertexRectangleShader.hlsl", ShaderType::Vertex, (ID3D11DeviceChild**)&m_pRectVertexShader, &pRectangleVertexShaderCode);
+    }
+
+    if (SUCCEEDED(result))
+    {
+        result = CreateShader(L"PixelRectangleShader.hlsl", ShaderType::Pixel, (ID3D11DeviceChild**)&m_pRectPixelShader);
+    }
+
+    if (SUCCEEDED(result))
+    {
+        result = m_pDevice->CreateInputLayout(m_pRect->InputDesc, 2, pRectangleVertexShaderCode->GetBufferPointer(), 
+                                                pRectangleVertexShaderCode->GetBufferSize(), &m_pRectInputLayout);
+
+        if (SUCCEEDED(result))
+        {
+            std::string name = "RectangleInputLayout";
+
+            result = m_pRectInputLayout->SetPrivateData(WKPDID_D3DDebugObjectName,
+                (UINT)name.length(), name.c_str());
+        }
+    }
+
+    if (pRectangleVertexShaderCode)
+    {
+        pRectangleVertexShaderCode->Release();
+        pRectangleVertexShaderCode = nullptr;
+    }
+
+    if (SUCCEEDED(result))
+    {
+        RECTANGLE::RectGeomBuffer geomBuffer;
+        geomBuffer.m = DirectX::XMMatrixTranslation(1.0f, 0, 0);
+        geomBuffer.color = XMFLOAT4{ 0.5f, 0, 0.5f, 1.0f };
+        m_pRect->CreateGeometryBuffer(m_pDevice, "RectGeomBuffer", geomBuffer);
     }
 
     return result;

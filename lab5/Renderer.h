@@ -18,12 +18,7 @@
 #include "framework.h"
 
 #include "Sphere.h"
-
-struct Vertex
-{
-    float x, y, z;
-    COLORREF color;
-};
+#include "Rectangle.h"
 
 struct TextureVertex
 {
@@ -84,11 +79,17 @@ public:
         , m_pSphereVertexShader(nullptr)
         , m_pSphereInputLayout(nullptr)
         , m_pSphere(nullptr)
+        , m_pRect(nullptr)
         , m_pCubemapTexture(nullptr)
         , m_pCubemapView(nullptr)
         , m_pDepthBuffer(nullptr)
         , m_pDepthStencilView(nullptr)
         , m_pDepthState(nullptr)
+        , m_pTransDepthState(nullptr)
+        , m_pTransBlendState(nullptr)
+        , m_pRectPixelShader(nullptr)
+        , m_pRectVertexShader(nullptr)
+        , m_pRectInputLayout(nullptr)
     {
     }
 
@@ -122,10 +123,13 @@ private:
     HRESULT CreateSceneBuffer();
     HRESULT CreateSampler();
     HRESULT CreateDepthState();
+    HRESULT CreateTPDepthState();
+    HRESULT CreateBlendState();
 
     HRESULT LoadTexture();
 
     HRESULT InitSphere();
+    HRESULT InitRect();
     HRESULT InitCubemap();
 
     void RenderSphere();
@@ -165,7 +169,11 @@ private:
 
     ID3D11Texture2D* m_pDepthBuffer;
     ID3D11DepthStencilView* m_pDepthStencilView;
+
     ID3D11DepthStencilState* m_pDepthState;
+    ID3D11DepthStencilState* m_pTransDepthState;
+
+    ID3D11BlendState* m_pTransBlendState;
 
     ID3D11PixelShader*  m_pPixelShader;
     ID3D11VertexShader* m_pVertexShader;
@@ -180,7 +188,14 @@ private:
     ID3D11PixelShader*  m_pSpherePixelShader;
     ID3D11VertexShader* m_pSphereVertexShader;
     ID3D11InputLayout*  m_pSphereInputLayout;
-    Sphere*             m_pSphere;
+
+    ID3D11PixelShader* m_pRectPixelShader;
+    ID3D11VertexShader* m_pRectVertexShader;
+    ID3D11InputLayout* m_pRectInputLayout;
+
+
+    RECTANGLE::Rectangle* m_pRect;
+    Sphere*               m_pSphere;
 
     ID3D11Texture2D* m_pCubemapTexture;
     ID3D11ShaderResourceView* m_pCubemapView;
