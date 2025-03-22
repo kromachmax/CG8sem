@@ -349,6 +349,13 @@ void Renderer::CleanupDevice()
 
     delete m_pRect;
 
+    if (m_pRect2 != nullptr)
+    {
+        m_pRect2->CleanupRectangle();
+    }
+
+    delete m_pRect2;
+
 #ifdef _DEBUG
     if (m_pDevice != nullptr)
     {
@@ -390,7 +397,7 @@ bool Renderer::Render()
 
     static const FLOAT BackColor[4] = { 0.0f, 0.0f, 0.25f, 1.0f };
     m_pDeviceContext->ClearRenderTargetView(m_pBackBufferRTV, BackColor);
-    m_pDeviceContext->ClearDepthStencilView(m_pDepthStencilView, D3D11_CLEAR_DEPTH, 0.0f, 0);
+    m_pDeviceContext->ClearDepthStencilView(m_pDepthStencilView, D3D11_CLEAR_DEPTH, 1.0f, 0);
 
     D3D11_VIEWPORT viewport{};
     viewport.TopLeftX = 0;
@@ -514,7 +521,7 @@ bool Renderer::Update()
     float fov = (float)M_PI / 3;
     float c = 1.0f / tanf(fov / 2);
     float aspectRatio = (float)m_height / m_width;
-    DirectX::XMMATRIX p = DirectX::XMMatrixPerspectiveLH(tanf(fov / 2) * 2 * f, tanf(fov / 2) * 2 * f * aspectRatio, f, n);
+    DirectX::XMMATRIX p = DirectX::XMMatrixPerspectiveLH(tanf(fov / 2) * 2 * n, tanf(fov / 2) * 2 * n * aspectRatio, n, f);
 
     D3D11_MAPPED_SUBRESOURCE subresource;
     HRESULT result = m_pDeviceContext->Map(m_pSceneBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &subresource);
@@ -1161,7 +1168,7 @@ HRESULT Renderer::CreateDepthState()
     D3D11_DEPTH_STENCIL_DESC desc = {};
     desc.DepthEnable = TRUE;
     desc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
-    desc.DepthFunc = D3D11_COMPARISON_GREATER_EQUAL;
+    desc.DepthFunc = D3D11_COMPARISON_LESS_EQUAL;
     desc.StencilEnable = FALSE;
 
     result = m_pDevice->CreateDepthStencilState(&desc, &m_pDepthState);
@@ -1183,8 +1190,8 @@ HRESULT Renderer::CreateTPDepthState()
 
     D3D11_DEPTH_STENCIL_DESC desc = {};
     desc.DepthEnable = TRUE;
-    desc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
-    desc.DepthFunc = D3D11_COMPARISON_GREATER_EQUAL;
+    desc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ZERO;
+    desc.DepthFunc = D3D11_COMPARISON_LESS_EQUAL;
     desc.StencilEnable = FALSE;
 
     result = m_pDevice->CreateDepthStencilState(&desc, &m_pTransDepthState);
