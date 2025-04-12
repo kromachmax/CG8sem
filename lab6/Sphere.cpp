@@ -49,6 +49,11 @@ void Sphere::CreateSphere()
             pIndices[index + 4] = (UINT16)(lat * (SphereSteps + 1) + SphereSteps + 1 + lon);
         }
     }
+
+    for (auto& ver : sphereVertices)
+    {
+        ver *= 0.05f;
+    }
 }
 
 HRESULT Sphere::CreateVertexBuffer(ID3D11Device* m_pDevice)

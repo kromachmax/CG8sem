@@ -50,6 +50,14 @@ struct Camera
     float theta;
 };
 
+struct TextureNormalVertex
+{
+    XMFLOAT3 pos;
+    XMFLOAT3 tan;
+    XMFLOAT3 normal;
+    float u, v;
+};
+
 class Renderer
 {
 public:
@@ -92,6 +100,10 @@ public:
         , m_pRectInputLayout(nullptr)
         , m_pRasterState(nullptr)
         , m_pRect2(nullptr)
+        , m_pLight(nullptr)
+        , m_pLightInputLayout(nullptr)
+        , m_pLightVertexShader(nullptr)
+        , m_pLightPixelShader(nullptr)
     {
     }
 
@@ -134,6 +146,7 @@ private:
     HRESULT InitSphere();
     HRESULT InitRect();
     HRESULT InitCubemap();
+    HRESULT InitLight();
 
     void RenderSphere();
     void RenderRectangles();
@@ -193,6 +206,10 @@ private:
     ID3D11VertexShader* m_pSphereVertexShader;
     ID3D11InputLayout*  m_pSphereInputLayout;
 
+    ID3D11PixelShader* m_pLightPixelShader;
+    ID3D11VertexShader* m_pLightVertexShader;
+    ID3D11InputLayout* m_pLightInputLayout;
+
     ID3D11PixelShader* m_pRectPixelShader;
     ID3D11VertexShader* m_pRectVertexShader;
     ID3D11InputLayout* m_pRectInputLayout;
@@ -201,6 +218,7 @@ private:
     RECTANGLE::Rectangle* m_pRect;
     RECTANGLE::Rectangle* m_pRect2;
     Sphere*               m_pSphere;
+    Sphere*               m_pLight;
 
     ID3D11Texture2D* m_pCubemapTexture;
     ID3D11ShaderResourceView* m_pCubemapView;

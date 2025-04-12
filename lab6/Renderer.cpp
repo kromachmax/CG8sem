@@ -743,6 +743,11 @@ HRESULT Renderer::InitScene()
         assert(SUCCEEDED(result));
     }
 
+    if (SUCCEEDED(result))
+    {
+        result = InitLight();
+    }
+
     return result;
 }
 
@@ -1398,6 +1403,72 @@ HRESULT Renderer::InitSphere()
     return result;
 }
 
+
+
+HRESULT Renderer::InitLight()
+{
+    static const D3D11_INPUT_ELEMENT_DESC InputDesc[] = {
+        {"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0}
+    };
+
+    HRESULT result = S_OK;
+    static const size_t SphereSteps = 32;
+
+    m_pLight = new Sphere();
+
+    m_pLight->GetSphereDataSize(SphereSteps);
+    m_pLight->CreateSphere();
+
+    if (SUCCEEDED(result))
+    {
+        m_pLight->CreateVertexBuffer(m_pDevice);
+    }
+
+    if (SUCCEEDED(result))
+    {
+        m_pLight->CreateIndexBuffer(m_pDevice);
+    }
+
+    ID3DBlob* pLightVertexShaderCode = nullptr;
+
+    if (SUCCEEDED(result))
+    {
+        result = CreateShader(L"VertexLightShader.hlsl", ShaderType::Vertex, (ID3D11DeviceChild**)&m_pLightVertexShader, &pLightVertexShaderCode);
+    }
+
+    if (SUCCEEDED(result))
+    {
+        result = CreateShader(L"PixelLightShader.hlsl", ShaderType::Pixel, (ID3D11DeviceChild**)&m_pLightPixelShader);
+    }
+
+    if (SUCCEEDED(result))
+    {
+        result = m_pDevice->CreateInputLayout(InputDesc, 1, pLightVertexShaderCode->GetBufferPointer(), pLightVertexShaderCode->GetBufferSize(), &m_pLightInputLayout);
+
+        if (SUCCEEDED(result))
+        {
+            std::string name = "LightInputLayout";
+
+            result = m_pLightInputLayout->SetPrivateData(WKPDID_D3DDebugObjectName,
+                (UINT)name.length(), name.c_str());
+        }
+    }
+
+    if (pLightVertexShaderCode)
+    {
+        pLightVertexShaderCode->Release();
+        pLightVertexShaderCode = nullptr;
+    }
+
+    if (SUCCEEDED(result))
+    {
+        m_pLight->CreateGeometryBuffer(m_pDevice);
+    }
+
+    return result;
+}
+
+
 HRESULT Renderer::InitRect()
 {
     HRESULT result = S_OK;
@@ -1559,6 +1630,7 @@ HRESULT Renderer::InitCubemap()
 
     return result;
 }
+
 
 void Renderer::RenderSphere()
 {
