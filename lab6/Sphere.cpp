@@ -32,7 +32,7 @@ void Sphere::CreateSphere()
                 cosf(lonAngle) * cosf(latAngle)
             };
 
-            pPos[index] = r * 0.5f;
+            pPos[index] = r;
         }
     }
 
@@ -48,11 +48,6 @@ void Sphere::CreateSphere()
             pIndices[index + 5] = (UINT16)(lat * (SphereSteps + 1) + SphereSteps + 1 + lon + 1);
             pIndices[index + 4] = (UINT16)(lat * (SphereSteps + 1) + SphereSteps + 1 + lon);
         }
-    }
-
-    for (auto& ver : sphereVertices)
-    {
-        ver *= 0.05f;
     }
 }
 
@@ -133,6 +128,7 @@ HRESULT Sphere::CreateGeometryBuffer(ID3D11Device* m_pDevice)
     SphereGeomBuffer geomBuffer;
     geomBuffer.m = DirectX::XMMatrixIdentity();
     geomBuffer.size.x = 1.0f;
+    geomBuffer.color = XMFLOAT4{ 1,1,1,1 };
 
     D3D11_SUBRESOURCE_DATA data;
     data.pSysMem = &geomBuffer;
@@ -151,6 +147,24 @@ HRESULT Sphere::CreateGeometryBuffer(ID3D11Device* m_pDevice)
     }
 
     return result;
+}
+
+HRESULT Sphere::UpdateGeomtryBuffer(ID3D11DeviceContext* m_pDeviceContext, SphereGeomBuffer* geomBuffer) 
+{
+
+    m_pDeviceContext->UpdateSubresource(m_pSphereGeomBuffer, 0, nullptr, &geomBuffer, 0, 0);
+
+    return E_NOTIMPL;
+}
+
+HRESULT Sphere::Scale()
+{
+    for (auto& ver : sphereVertices)
+    {
+        ver *= 2.0f;
+    }
+
+    return E_NOTIMPL;
 }
 
 void Sphere::CleanupSphere()

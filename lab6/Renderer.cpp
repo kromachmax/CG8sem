@@ -103,20 +103,30 @@ bool Renderer::InitDevice(HWND hWnd)
 
     if (SUCCEEDED(result))
     {
+        m_camera.poi = XMFLOAT3{ 0,0,0 };
+        m_camera.r = 5.0f;
+        m_camera.phi = -(float)M_PI / 4;
+        m_camera.theta = (float)M_PI / 4;
+    }
+
+    m_pScene = new SceneBuffer();
+
+    if (SUCCEEDED(result))
+    {
+        m_pScene->lightCount.x = 1;
+        m_pScene->lights[0].pos = XMFLOAT4{ 0, 1.05f, 0, 1 };
+        m_pScene->lights[0].color = XMFLOAT4{ 1,1,0 };
+        m_pScene->ambientColor = XMFLOAT4(0, 0, 0.2f, 0);
+    }
+
+    if (SUCCEEDED(result))
+    {
         result = SetupBackBuffer();
     }
 
     if (SUCCEEDED(result))
     {
         result = InitScene();
-    }
-
-    if (SUCCEEDED(result))
-    {
-        m_camera.poi = XMFLOAT3{ 0,0,0 };
-        m_camera.r = 5.0f;
-        m_camera.phi = -(float)M_PI / 4;
-        m_camera.theta = (float)M_PI / 4;
     }
 
     pSelectedAdapter->Release();
@@ -335,6 +345,25 @@ void Renderer::CleanupDevice()
         m_pRasterState = nullptr;
     }
 
+    if (m_pLightInputLayout)
+    {
+        m_pLightInputLayout->Release();
+        m_pLightInputLayout = nullptr;
+    }
+
+    if (m_pLightVertexShader)
+    {
+        m_pLightVertexShader->Release();
+        m_pLightVertexShader = nullptr;
+    }
+
+
+    if (m_pLightPixelShader)
+    {
+        m_pLightPixelShader->Release();
+        m_pLightPixelShader = nullptr;
+    }
+
     if (m_pSphere != nullptr)
     {
         m_pSphere->CleanupSphere();
@@ -355,6 +384,21 @@ void Renderer::CleanupDevice()
     }
 
     delete m_pRect2;
+
+    for (int i = 0; i < m_pScene->lightCount.x; i++)
+    {
+        if (m_pLights[i] != nullptr)
+        {
+            m_pLights[i]->CleanupSphere();
+        }
+
+        delete m_pLights[i];
+    }
+
+    if (m_pScene)
+    {
+        delete m_pScene;
+    }
 
 #ifdef _DEBUG
     if (m_pDevice != nullptr)
@@ -450,6 +494,11 @@ bool Renderer::Render()
     m_pDeviceContext->VSSetConstantBuffers(1, 1, cbuffers2);
     m_pDeviceContext->DrawIndexed(36, 0, 0);
 
+    for (int i = 0; i < m_pScene->lightCount.x; i++)
+    {
+        RenderLights(i);
+    }
+
     RenderSphere();
 
     RenderRectangles();
@@ -488,6 +537,15 @@ bool Renderer::Update()
     geomBuffer.m = m;
 
     m_pDeviceContext->UpdateSubresource(m_pGeomBuffer2, 0, nullptr, &geomBuffer, 0, 0);
+
+    for (int i = 0; i < m_pScene->lightCount.x; ++i)
+    {
+        SphereGeomBuffer geomBuffer;
+        geomBuffer.m = DirectX::XMMatrixTranslation(m_pScene->lights[i].pos.x, m_pScene->lights[i].pos.y, m_pScene->lights[i].pos.z);
+        geomBuffer.color = m_pScene->lights[i].color;
+
+        m_pLights[i]->UpdateGeomtryBuffer(m_pDeviceContext, &geomBuffer);
+    }
 
     UpdateCamera(deltaSec);
 
@@ -743,9 +801,12 @@ HRESULT Renderer::InitScene()
         assert(SUCCEEDED(result));
     }
 
-    if (SUCCEEDED(result))
+    for (int i = 0; i < m_pScene->lightCount.x; ++i)
     {
-        result = InitLight();
+        if (SUCCEEDED(result))
+        {
+            result = InitLights(i);
+        }
     }
 
     return result;
@@ -1405,7 +1466,7 @@ HRESULT Renderer::InitSphere()
 
 
 
-HRESULT Renderer::InitLight()
+HRESULT Renderer::InitLights(int i)
 {
     static const D3D11_INPUT_ELEMENT_DESC InputDesc[] = {
         {"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0}
@@ -1414,19 +1475,20 @@ HRESULT Renderer::InitLight()
     HRESULT result = S_OK;
     static const size_t SphereSteps = 32;
 
-    m_pLight = new Sphere();
+    m_pLights[i] = new Sphere();
 
-    m_pLight->GetSphereDataSize(SphereSteps);
-    m_pLight->CreateSphere();
+    m_pLights[i]->GetSphereDataSize(SphereSteps);
+    m_pLights[i]->CreateSphere();
+    m_pLights[i]->Scale();
 
     if (SUCCEEDED(result))
     {
-        m_pLight->CreateVertexBuffer(m_pDevice);
+        m_pLights[i]->CreateVertexBuffer(m_pDevice);
     }
 
     if (SUCCEEDED(result))
     {
-        m_pLight->CreateIndexBuffer(m_pDevice);
+        m_pLights[i]->CreateIndexBuffer(m_pDevice);
     }
 
     ID3DBlob* pLightVertexShaderCode = nullptr;
@@ -1462,7 +1524,7 @@ HRESULT Renderer::InitLight()
 
     if (SUCCEEDED(result))
     {
-        m_pLight->CreateGeometryBuffer(m_pDevice);
+        m_pLights[i]->CreateGeometryBuffer(m_pDevice);
     }
 
     return result;
@@ -1632,6 +1694,27 @@ HRESULT Renderer::InitCubemap()
 }
 
 
+void Renderer::RenderLights(int i)
+{
+    m_pDeviceContext->OMSetBlendState(m_pTransBlendState, nullptr, 0xffffffff);
+    m_pDeviceContext->OMSetDepthStencilState(m_pDepthState, 0);
+
+    m_pDeviceContext->IASetIndexBuffer(m_pLights[i]->m_pSphereIndexBuffer, DXGI_FORMAT_R16_UINT, 0);
+
+    ID3D11Buffer* vertexBuffers[] = { m_pLights[i]->m_pSphereVertexBuffer };
+    UINT strides[] = { 12 };
+    UINT offsets[] = { 0 };
+    ID3D11Buffer* cbuffers[] = { m_pSceneBuffer, m_pLights[i]->m_pSphereGeomBuffer };
+
+    m_pDeviceContext->IASetVertexBuffers(0, 1, vertexBuffers, strides, offsets);
+    m_pDeviceContext->IASetInputLayout(m_pSphereInputLayout);
+    m_pDeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+    m_pDeviceContext->VSSetShader(m_pLightVertexShader, nullptr, 0);
+    m_pDeviceContext->VSSetConstantBuffers(0, 2, cbuffers);
+    m_pDeviceContext->PSSetShader(m_pSpherePixelShader, nullptr, 0);
+    m_pDeviceContext->DrawIndexed(m_pLights[i]->m_sphereIndexCount, 0, 0);
+}
+
 void Renderer::RenderSphere()
 {
     ID3D11SamplerState* samplers[] = { m_pSampler };
@@ -1653,6 +1736,7 @@ void Renderer::RenderSphere()
     m_pDeviceContext->VSSetShader(m_pSphereVertexShader, nullptr, 0);
     m_pDeviceContext->VSSetConstantBuffers(0, 2, cbuffers);
     m_pDeviceContext->PSSetShader(m_pSpherePixelShader, nullptr, 0);
+    m_pDeviceContext->PSSetConstantBuffers(0, 2, cbuffers);
     m_pDeviceContext->DrawIndexed(m_pSphere->m_sphereIndexCount, 0, 0);
 }
 

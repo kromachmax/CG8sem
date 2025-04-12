@@ -25,6 +25,7 @@ struct SphereGeomBuffer
 {
     DirectX::XMMATRIX m;
     XMFLOAT4 size;
+    XMFLOAT4 color;
 };
 
 struct Sphere
@@ -46,6 +47,8 @@ struct Sphere
     HRESULT CreateVertexBuffer(ID3D11Device* m_pDevice);
     HRESULT CreateIndexBuffer(ID3D11Device* m_pDevice);
     HRESULT CreateGeometryBuffer(ID3D11Device* m_pDevice);
+    HRESULT UpdateGeomtryBuffer(ID3D11DeviceContext* m_pDevice, SphereGeomBuffer* geomBuffer);
+    HRESULT Scale();
 
     void CleanupSphere();
 

@@ -36,12 +36,6 @@ struct GeomBuffer
     DirectX::XMMATRIX m;
 };
 
-struct SceneBuffer
-{
-    DirectX::XMMATRIX vp;
-    XMFLOAT4 cameraPos;
-};
-
 struct Camera
 {
     XMFLOAT3 poi;
@@ -56,6 +50,21 @@ struct TextureNormalVertex
     XMFLOAT3 tan;
     XMFLOAT3 normal;
     float u, v;
+};
+
+struct Light
+{
+    XMFLOAT4 pos = XMFLOAT4{ 0,0,0,0 };
+    XMFLOAT4 color = XMFLOAT4{ 1,1,1,0 };
+};
+
+struct SceneBuffer
+{
+    DirectX::XMMATRIX vp;
+    XMFLOAT4 cameraPos;
+    XMFLOAT4 lightCount;
+    Light lights[10];
+    XMFLOAT4 ambientColor;
 };
 
 class Renderer
@@ -100,10 +109,11 @@ public:
         , m_pRectInputLayout(nullptr)
         , m_pRasterState(nullptr)
         , m_pRect2(nullptr)
-        , m_pLight(nullptr)
+        , m_pLights {nullptr}
         , m_pLightInputLayout(nullptr)
         , m_pLightVertexShader(nullptr)
         , m_pLightPixelShader(nullptr)
+        , m_pScene(nullptr)
     {
     }
 
@@ -146,8 +156,9 @@ private:
     HRESULT InitSphere();
     HRESULT InitRect();
     HRESULT InitCubemap();
-    HRESULT InitLight();
+    HRESULT InitLights(int idx);
 
+    void RenderLights(int idx);
     void RenderSphere();
     void RenderRectangles();
 
@@ -218,7 +229,9 @@ private:
     RECTANGLE::Rectangle* m_pRect;
     RECTANGLE::Rectangle* m_pRect2;
     Sphere*               m_pSphere;
-    Sphere*               m_pLight;
+    std::vector<Sphere*>  m_pLights;
+
+    SceneBuffer* m_pScene;
 
     ID3D11Texture2D* m_pCubemapTexture;
     ID3D11ShaderResourceView* m_pCubemapView;
