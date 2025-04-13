@@ -1836,12 +1836,19 @@ void Renderer::OnMouseDown(WPARAM btnState, int x, int y)
         m_lastMousePos.x = x;
         m_lastMousePos.y = y;
     }
+    if (btnState & MK_RBUTTON)
+    {
+        m_isMouseMovingLight = true;
+        m_lastMousePos.x = x;
+        m_lastMousePos.y = y;
+    }
 }
 
 
 void Renderer::OnMouseUp(WPARAM btnState, int x, int y)
 {
     m_isMouseRotating = false;
+    m_isMouseMovingLight = false;
 }
 
 
@@ -1854,6 +1861,43 @@ void Renderer::OnMouseMove(WPARAM btnState, int x, int y)
 
         m_camera.phi += dx * CameraRotationSpeed;
         m_camera.theta -= dy * CameraRotationSpeed;
+
+        m_lastMousePos.x = x;
+        m_lastMousePos.y = y;
+    }
+    if (m_isMouseMovingLight && (btnState & MK_RBUTTON))
+    {
+        float dx = (float)(x - m_lastMousePos.x) * m_mouseSensitivity;
+        float dy = (float)(y - m_lastMousePos.y) * m_mouseSensitivity;
+
+        float dirX = cosf(m_camera.theta) * cosf(m_camera.phi);
+        float dirY = sinf(m_camera.theta);
+        float dirZ = cosf(m_camera.theta) * sinf(m_camera.phi);
+
+        float upTheta = m_camera.theta + (float)M_PI / 2;
+        float upX = cosf(upTheta) * cosf(m_camera.phi);
+        float upY = sinf(upTheta);
+        float upZ = cosf(upTheta) * sinf(m_camera.phi);
+
+        float rightX = dirY * upZ - dirZ * upY;
+        float rightY = dirZ * upX - dirX * upZ;
+        float rightZ = dirX * upY - dirY * upX;
+
+        float rightLen = sqrtf(rightX * rightX + rightY * rightY + rightZ * rightZ);
+        if (rightLen > 0.0f)
+        {
+            rightX /= rightLen;
+            rightY /= rightLen;
+            rightZ /= rightLen;
+        }
+
+        float moveSpeed = 1.0f;
+        m_pScene->lights[0].pos.x += rightX * dx * moveSpeed;
+        m_pScene->lights[0].pos.y += rightY * dx * moveSpeed;
+        m_pScene->lights[0].pos.z += rightZ * dx * moveSpeed;
+        m_pScene->lights[0].pos.x -= upX * dy * moveSpeed;
+        m_pScene->lights[0].pos.y -= upY * dy * moveSpeed;
+        m_pScene->lights[0].pos.z -= upZ * dy * moveSpeed;
 
         m_lastMousePos.x = x;
         m_lastMousePos.y = y;

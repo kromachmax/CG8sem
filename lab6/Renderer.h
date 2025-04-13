@@ -190,6 +190,8 @@ private:
 
     bool PressedKeys[1024];
 
+    bool m_isMouseMovingLight = false;
+
     ID3D11Buffer* m_pVertexBuffer;
     ID3D11Buffer* m_pIndexBuffer;
     ID3D11Buffer* m_pSceneBuffer;

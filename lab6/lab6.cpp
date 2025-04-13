@@ -194,13 +194,13 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         pRenderer->SetPressedKeys(wParam, false);
         break;
     }
-
+    case WM_RBUTTONDOWN:
     case WM_LBUTTONDOWN:
     {
         pRenderer->OnMouseDown(wParam, LOWORD(lParam), HIWORD(lParam));
         return 0;
     }
-
+    case WM_RBUTTONUP:
     case WM_LBUTTONUP:
     {
         pRenderer->OnMouseUp(wParam, LOWORD(lParam), HIWORD(lParam));
