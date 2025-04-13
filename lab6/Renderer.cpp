@@ -116,7 +116,7 @@ bool Renderer::InitDevice(HWND hWnd)
         m_pScene->lightCount.x = 1;
         m_pScene->lights[0].pos = XMFLOAT4{ 2.0, 1.0f, 0, 1 };
         m_pScene->lights[0].color = XMFLOAT4{ 1, 1, 0, 0};
-        m_pScene->ambientColor = XMFLOAT4(0, 0, 0.2f, 0);
+        m_pScene->ambientColor = XMFLOAT4(0, 0, 0.1f, 0);
     }
 
     if (SUCCEEDED(result))
@@ -489,11 +489,12 @@ bool Renderer::Render()
     ID3D11Buffer* cbuffers[] = { m_pSceneBuffer, m_pGeomBuffer };
 
     m_pDeviceContext->IASetVertexBuffers(0, 1, vertexBuffers, strides, offsets);
-    m_pDeviceContext->VSSetConstantBuffers(0, 2, cbuffers);
     m_pDeviceContext->IASetInputLayout(m_pInputLayout);
     m_pDeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
     m_pDeviceContext->VSSetShader(m_pVertexShader, nullptr, 0);
     m_pDeviceContext->PSSetShader(m_pPixelShader, nullptr, 0);
+    m_pDeviceContext->VSSetConstantBuffers(0, 2, cbuffers);
+    m_pDeviceContext->PSSetConstantBuffers(0, 2, cbuffers);
     m_pDeviceContext->DrawIndexed(36, 0, 0);
 
     ID3D11Buffer* cbuffers2[] = { m_pGeomBuffer2 };
@@ -599,6 +600,7 @@ bool Renderer::Update()
     float aspectRatio = (float)m_height / m_width;
     DirectX::XMMATRIX p = DirectX::XMMatrixPerspectiveLH(tanf(fov / 2) * 2 * n, tanf(fov / 2) * 2 * n * aspectRatio, n, f);
 
+
     D3D11_MAPPED_SUBRESOURCE subresource;
     HRESULT result = m_pDeviceContext->Map(m_pSceneBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &subresource);
     assert(SUCCEEDED(result));
@@ -606,10 +608,15 @@ bool Renderer::Update()
     if (SUCCEEDED(result))
     {
         SceneBuffer& sceneBuffer = *reinterpret_cast<SceneBuffer*>(subresource.pData);
-
         sceneBuffer.vp = DirectX::XMMatrixMultiply(v, p);
         sceneBuffer.cameraPos = cameraPos;
-
+        sceneBuffer.lightCount = m_pScene->lightCount;
+        sceneBuffer.ambientColor = m_pScene->ambientColor;
+        for (int i = 0; i < m_pScene->lightCount.x; i++)
+        {
+            sceneBuffer.lights[i].pos = m_pScene->lights[i].pos;
+            sceneBuffer.lights[i].color = m_pScene->lights[i].color;
+        }
         m_pDeviceContext->Unmap(m_pSceneBuffer, 0);
     }
 
@@ -730,7 +737,9 @@ HRESULT Renderer::InitScene()
 
     static const D3D11_INPUT_ELEMENT_DESC InputDesc[] = {
         {"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
-        {"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0}
+        {"TANGENT", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0},
+        {"NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 24, D3D11_INPUT_PER_VERTEX_DATA, 0},
+        {"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 36, D3D11_INPUT_PER_VERTEX_DATA, 0}
     };
 
     ID3DBlob* pVertexShaderCode = nullptr;
@@ -747,7 +756,7 @@ HRESULT Renderer::InitScene()
 
     if (SUCCEEDED(result))
     {
-        result = m_pDevice->CreateInputLayout(InputDesc, 2, pVertexShaderCode->GetBufferPointer(), pVertexShaderCode->GetBufferSize(), &m_pInputLayout);
+        result = m_pDevice->CreateInputLayout(InputDesc, 4, pVertexShaderCode->GetBufferPointer(), pVertexShaderCode->GetBufferSize(), &m_pInputLayout);
 
         if (SUCCEEDED(result))
         {
@@ -1100,7 +1109,7 @@ HRESULT Renderer::CreateVertexBuffer()
        
 
        {XMFLOAT3{-0.5,  0.5, -0.5}, XMFLOAT3{1, 0, 0}, XMFLOAT3{0, 1, 0}, 0, 1},
-       {XMFLOAT3{-0.5,  0.5, -0.5}, XMFLOAT3{1, 0, 0}, XMFLOAT3{0, 1, 0}, 1, 1},
+       {XMFLOAT3{0.5,  0.5, -0.5}, XMFLOAT3{1, 0, 0}, XMFLOAT3{0, 1, 0}, 1, 1},
        {XMFLOAT3{ 0.5,  0.5,  0.5}, XMFLOAT3{1, 0, 0}, XMFLOAT3{0, 1, 0}, 1, 0},
        {XMFLOAT3{-0.5,  0.5,  0.5}, XMFLOAT3{1, 0, 0}, XMFLOAT3{0, 1, 0}, 0, 0},
       

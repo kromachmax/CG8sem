@@ -161,7 +161,7 @@ HRESULT Sphere::Scale()
 {
     for (auto& ver : sphereVertices)
     {
-        ver *= 0.05f;
+        ver *= 0.1f;
     }
 
     return S_OK;
