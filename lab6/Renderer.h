@@ -112,6 +112,8 @@ public:
         , m_pLightPixelShader(nullptr)
         , m_pScene(nullptr)
         , m_pNoTransBlendState(nullptr)
+        , m_pNormalTextureView(nullptr)
+        , m_pNormalTexture(nullptr)
     {
     }
 
@@ -150,6 +152,7 @@ private:
     HRESULT CreateRasterizerState();
 
     HRESULT LoadTexture();
+    HRESULT LoadNormalTexture();
 
     HRESULT InitSphere();
     HRESULT InitRect();
@@ -210,8 +213,10 @@ private:
 
     ID3D11InputLayout* m_pInputLayout;
 
-    ID3D11Texture2D*            m_pTexture;
+    ID3D11Texture2D* m_pTexture;
+    ID3D11Texture2D* m_pNormalTexture;
     ID3D11ShaderResourceView*   m_pTextureView;
+    ID3D11ShaderResourceView*   m_pNormalTextureView;
     ID3D11SamplerState*         m_pSampler;
 
 

@@ -476,8 +476,8 @@ bool Renderer::Render()
     ID3D11SamplerState* samplers[] = { m_pSampler };
     m_pDeviceContext->PSSetSamplers(0, 1, samplers);
 
-    ID3D11ShaderResourceView* resources[] = { m_pTextureView };
-    m_pDeviceContext->PSSetShaderResources(0, 1, resources);
+    ID3D11ShaderResourceView* resources[] = { m_pTextureView, m_pNormalTextureView };
+    m_pDeviceContext->PSSetShaderResources(0, 2, resources);
 
     m_pDeviceContext->IASetIndexBuffer(m_pIndexBuffer, DXGI_FORMAT_R16_UINT, 0);
 
@@ -803,6 +803,12 @@ HRESULT Renderer::InitScene()
     {
         result = LoadTexture();
     }
+
+    if (SUCCEEDED(result))
+    {
+        result = LoadNormalTexture();
+    }
+
 
     if (SUCCEEDED(result))
     {
@@ -1418,7 +1424,7 @@ HRESULT Renderer::LoadTexture()
     DXGI_FORMAT textureFmt;
     HRESULT result;
 
-    const std::wstring TextureName = L"../textures/metal.dds";
+    const std::wstring TextureName = L"../textures/bricks2.dds";
 
     TextureDesc textureDesc;
     bool ddsRes = LoadDDS(TextureName.c_str(), textureDesc);
@@ -1482,6 +1488,77 @@ HRESULT Renderer::LoadTexture()
         desc.Texture2D.MostDetailedMip = 0;
 
         result = m_pDevice->CreateShaderResourceView(m_pTexture, &desc, &m_pTextureView);
+        assert(SUCCEEDED(result));
+    }
+
+    return result;
+}
+
+HRESULT Renderer::LoadNormalTexture()
+{
+    DXGI_FORMAT textureFmt;
+    HRESULT result = S_OK;
+
+    const std::wstring TextureName = L"../textures/bricks_normal.dds";
+
+    TextureDesc textureDesc;
+    bool ddsRes = LoadDDS(TextureName.c_str(), textureDesc);
+
+    textureFmt = textureDesc.fmt;
+
+    D3D11_TEXTURE2D_DESC desc = {};
+    desc.Format = textureDesc.fmt;
+    desc.ArraySize = 1;
+    desc.MipLevels = textureDesc.mipmapsCount;
+    desc.Usage = D3D11_USAGE_IMMUTABLE;
+    desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+    desc.CPUAccessFlags = 0;
+    desc.MiscFlags = 0;
+    desc.SampleDesc.Count = 1;
+    desc.SampleDesc.Quality = 0;
+    desc.Height = textureDesc.height;
+    desc.Width = textureDesc.width;
+
+    UINT32 blockWidth = DivUp(desc.Width, 4u);
+    UINT32 blockHeight = DivUp(desc.Height, 4u);
+    UINT32 pitch = blockWidth * GetBytesPerBlock(desc.Format);
+    const char* pSrcData = reinterpret_cast<const char*>(textureDesc.pData);
+
+    std::vector<D3D11_SUBRESOURCE_DATA> data;
+    data.resize(desc.MipLevels);
+    for (UINT32 i = 0; i < desc.MipLevels; i++)
+    {
+        data[i].pSysMem = pSrcData;
+        data[i].SysMemPitch = pitch;
+        data[i].SysMemSlicePitch = 0;
+
+        pSrcData += pitch * blockHeight;
+        blockHeight = std::max(1u, blockHeight / 2);
+        blockWidth = std::max(1u, blockWidth / 2);
+        pitch = blockWidth * GetBytesPerBlock(desc.Format);
+    }
+    result = m_pDevice->CreateTexture2D(&desc, data.data(), &m_pNormalTexture);
+    assert(SUCCEEDED(result));
+
+    if (SUCCEEDED(result))
+    {
+        result = m_pNormalTexture->SetPrivateData(WKPDID_D3DDebugObjectName,
+            (UINT)TextureName.length(), TextureName.c_str());
+    }
+
+    free(textureDesc.pData);
+
+
+    if (SUCCEEDED(result))
+    {
+        D3D11_SHADER_RESOURCE_VIEW_DESC desc = {};
+
+        desc.Format = textureFmt;
+        desc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+        desc.Texture2D.MipLevels = textureDesc.mipmapsCount;
+        desc.Texture2D.MostDetailedMip = 0;
+
+        result = m_pDevice->CreateShaderResourceView(m_pNormalTexture, &desc, &m_pNormalTextureView);
         assert(SUCCEEDED(result));
     }
 

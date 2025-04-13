@@ -8,6 +8,7 @@ cbuffer GeomBuffer : register(b1)
 };
 
 Texture2D colorTexture : register(t0);
+Texture2D normalMapTexture : register(t1);
 
 SamplerState colorSampler : register(s0);
 
@@ -25,7 +26,10 @@ float4 PS(VSOutput pixel) : SV_Target0
     float3 color = colorTexture.Sample(colorSampler, pixel.uv).xyz;
 
     float3 normal = float3(0, 0, 0);
-    normal = pixel.norm;
+    
+    float3 binorm = normalize(cross(pixel.norm, pixel.tang));
+    float3 localNorm = normalMapTexture.Sample(colorSampler, pixel.uv).xyz * 2.0 - float3(1.0, 1.0, 1.0);
+    normal = localNorm.x * normalize(pixel.tang) + localNorm.y * binorm + localNorm.z * normalize(pixel.norm);
     
 
     return float4(CalculateColor(color, normal, pixel.worldPos.xyz, shine.x, false), 1.0);
