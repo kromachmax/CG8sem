@@ -46,7 +46,7 @@ struct Sphere
 
     HRESULT CreateVertexBuffer(ID3D11Device* m_pDevice);
     HRESULT CreateIndexBuffer(ID3D11Device* m_pDevice);
-    HRESULT CreateGeometryBuffer(ID3D11Device* m_pDevice);
+    HRESULT CreateGeometryBuffer(ID3D11Device* m_pDevice, XMFLOAT4 color);
     HRESULT UpdateGeomtryBuffer(ID3D11DeviceContext* m_pDevice, SphereGeomBuffer* geomBuffer);
     HRESULT Scale();
 

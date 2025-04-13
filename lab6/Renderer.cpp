@@ -114,8 +114,8 @@ bool Renderer::InitDevice(HWND hWnd)
     if (SUCCEEDED(result))
     {
         m_pScene->lightCount.x = 1;
-        m_pScene->lights[0].pos = XMFLOAT4{ 0, 1.05f, 0, 1 };
-        m_pScene->lights[0].color = XMFLOAT4{ 1,1,0 };
+        m_pScene->lights[0].pos = XMFLOAT4{ 2.0, 1.0f, 0, 1 };
+        m_pScene->lights[0].color = XMFLOAT4{ 1, 1, 0, 0};
         m_pScene->ambientColor = XMFLOAT4(0, 0, 0.2f, 0);
     }
 
@@ -364,6 +364,12 @@ void Renderer::CleanupDevice()
         m_pLightPixelShader = nullptr;
     }
 
+    if (m_pNoTransBlendState)
+    {
+        m_pNoTransBlendState->Release();
+        m_pNoTransBlendState = nullptr;
+    }
+
     if (m_pSphere != nullptr)
     {
         m_pSphere->CleanupSphere();
@@ -499,7 +505,7 @@ bool Renderer::Render()
         RenderLights(i);
     }
 
-    RenderSphere();
+    //RenderSphere();
 
     RenderRectangles();
 
@@ -538,10 +544,11 @@ bool Renderer::Update()
 
     m_pDeviceContext->UpdateSubresource(m_pGeomBuffer2, 0, nullptr, &geomBuffer, 0, 0);
 
-    for (int i = 0; i < m_pScene->lightCount.x; ++i)
+    for (int i = 0; i < m_pScene->lightCount.x; i++)
     {
         SphereGeomBuffer geomBuffer;
         geomBuffer.m = DirectX::XMMatrixTranslation(m_pScene->lights[i].pos.x, m_pScene->lights[i].pos.y, m_pScene->lights[i].pos.z);
+        geomBuffer.size = 1.0f;
         geomBuffer.color = m_pScene->lights[i].color;
 
         m_pLights[i]->UpdateGeomtryBuffer(m_pDeviceContext, &geomBuffer);
@@ -1299,6 +1306,19 @@ HRESULT Renderer::CreateBlendState()
             (UINT)name.length(), name.c_str());
     }
 
+    if (SUCCEEDED(result))
+    {
+        desc.RenderTarget[0].BlendEnable = FALSE;
+        result = m_pDevice->CreateBlendState(&desc, &m_pNoTransBlendState);
+    }
+    if (SUCCEEDED(result))
+    {
+        std::string name = "NoTransBlendState";
+
+        result = m_pNoTransBlendState->SetPrivateData(WKPDID_D3DDebugObjectName,
+            (UINT)name.length(), name.c_str());
+    }
+
     return result;
 }
 
@@ -1458,7 +1478,7 @@ HRESULT Renderer::InitSphere()
 
     if (SUCCEEDED(result))
     {
-        m_pSphere->CreateGeometryBuffer(m_pDevice);
+        m_pSphere->CreateGeometryBuffer(m_pDevice, {});
     }
 
     return result;
@@ -1473,7 +1493,7 @@ HRESULT Renderer::InitLights(int i)
     };
 
     HRESULT result = S_OK;
-    static const size_t SphereSteps = 32;
+    static const size_t SphereSteps = 128;
 
     m_pLights[i] = new Sphere();
 
@@ -1524,7 +1544,7 @@ HRESULT Renderer::InitLights(int i)
 
     if (SUCCEEDED(result))
     {
-        m_pLights[i]->CreateGeometryBuffer(m_pDevice);
+        m_pLights[i]->CreateGeometryBuffer(m_pDevice, m_pScene->lights[i].color);
     }
 
     return result;
@@ -1694,27 +1714,6 @@ HRESULT Renderer::InitCubemap()
 }
 
 
-void Renderer::RenderLights(int i)
-{
-    m_pDeviceContext->OMSetBlendState(m_pTransBlendState, nullptr, 0xffffffff);
-    m_pDeviceContext->OMSetDepthStencilState(m_pDepthState, 0);
-
-    m_pDeviceContext->IASetIndexBuffer(m_pLights[i]->m_pSphereIndexBuffer, DXGI_FORMAT_R16_UINT, 0);
-
-    ID3D11Buffer* vertexBuffers[] = { m_pLights[i]->m_pSphereVertexBuffer };
-    UINT strides[] = { 12 };
-    UINT offsets[] = { 0 };
-    ID3D11Buffer* cbuffers[] = { m_pSceneBuffer, m_pLights[i]->m_pSphereGeomBuffer };
-
-    m_pDeviceContext->IASetVertexBuffers(0, 1, vertexBuffers, strides, offsets);
-    m_pDeviceContext->IASetInputLayout(m_pSphereInputLayout);
-    m_pDeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-    m_pDeviceContext->VSSetShader(m_pLightVertexShader, nullptr, 0);
-    m_pDeviceContext->VSSetConstantBuffers(0, 2, cbuffers);
-    m_pDeviceContext->PSSetShader(m_pSpherePixelShader, nullptr, 0);
-    m_pDeviceContext->DrawIndexed(m_pLights[i]->m_sphereIndexCount, 0, 0);
-}
-
 void Renderer::RenderSphere()
 {
     ID3D11SamplerState* samplers[] = { m_pSampler };
@@ -1736,14 +1735,35 @@ void Renderer::RenderSphere()
     m_pDeviceContext->VSSetShader(m_pSphereVertexShader, nullptr, 0);
     m_pDeviceContext->VSSetConstantBuffers(0, 2, cbuffers);
     m_pDeviceContext->PSSetShader(m_pSpherePixelShader, nullptr, 0);
-    m_pDeviceContext->PSSetConstantBuffers(0, 2, cbuffers);
     m_pDeviceContext->DrawIndexed(m_pSphere->m_sphereIndexCount, 0, 0);
+}
+
+void Renderer::RenderLights(int i)
+{
+
+    m_pDeviceContext->OMSetDepthStencilState(m_pDepthState, 0);
+    m_pDeviceContext->OMSetBlendState(m_pNoTransBlendState, nullptr, 0xFFFFFFFF);
+
+    ID3D11Buffer* vertexBuffers[] = { m_pLights[i]->m_pSphereVertexBuffer };
+    UINT strides[] = { 12 };
+    UINT offsets[] = { 0 };
+    ID3D11Buffer* cbuffers[] = { m_pSceneBuffer, m_pLights[i]->m_pSphereGeomBuffer };
+
+
+    m_pDeviceContext->IASetIndexBuffer(m_pLights[i]->m_pSphereIndexBuffer, DXGI_FORMAT_R16_UINT, 0);
+    m_pDeviceContext->IASetVertexBuffers(0, 1, vertexBuffers, strides, offsets);
+    m_pDeviceContext->IASetInputLayout(m_pLightInputLayout);
+    m_pDeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+    m_pDeviceContext->VSSetShader(m_pLightVertexShader, nullptr, 0);
+    m_pDeviceContext->VSSetConstantBuffers(0, 2, cbuffers);
+    m_pDeviceContext->PSSetShader(m_pLightPixelShader, nullptr, 0);
+    m_pDeviceContext->PSSetConstantBuffers(0, 2, cbuffers);
+    m_pDeviceContext->DrawIndexed(m_pLights[i]->m_sphereIndexCount, 0, 0);
 }
 
 void Renderer::RenderRectangles()
 {
-    m_pDeviceContext->OMSetDepthStencilState(m_pTransDepthState, 0);
-
+    m_pDeviceContext->OMSetDepthStencilState(m_pDepthState, 0);
     m_pDeviceContext->OMSetBlendState(m_pTransBlendState, nullptr, 0xFFFFFFFF);
 
     ID3D11Buffer* vertexBuffers[] = { RECTANGLE::Rectangle::GetVertexBuffer()};

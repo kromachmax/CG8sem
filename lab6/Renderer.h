@@ -54,8 +54,8 @@ struct TextureNormalVertex
 
 struct Light
 {
-    XMFLOAT4 pos = XMFLOAT4{ 0,0,0,0 };
-    XMFLOAT4 color = XMFLOAT4{ 1,1,1,0 };
+    XMFLOAT4 pos = XMFLOAT4{ 0, 0, 0, 0 };
+    XMFLOAT4 color = XMFLOAT4{ 1, 1, 0, 0 };
 };
 
 struct SceneBuffer
@@ -114,6 +114,7 @@ public:
         , m_pLightVertexShader(nullptr)
         , m_pLightPixelShader(nullptr)
         , m_pScene(nullptr)
+        , m_pNoTransBlendState(nullptr)
     {
     }
 
@@ -202,6 +203,8 @@ private:
     ID3D11DepthStencilState* m_pTransDepthState;
 
     ID3D11BlendState* m_pTransBlendState;
+    ID3D11BlendState* m_pNoTransBlendState;
+
 
     ID3D11PixelShader*  m_pPixelShader;
     ID3D11VertexShader* m_pVertexShader;

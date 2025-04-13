@@ -113,7 +113,7 @@ HRESULT Sphere::CreateIndexBuffer(ID3D11Device* m_pDevice)
     return result;
 }
 
-HRESULT Sphere::CreateGeometryBuffer(ID3D11Device* m_pDevice)
+HRESULT Sphere::CreateGeometryBuffer(ID3D11Device* m_pDevice, XMFLOAT4 color)
 {
     HRESULT result{};
 
@@ -128,7 +128,7 @@ HRESULT Sphere::CreateGeometryBuffer(ID3D11Device* m_pDevice)
     SphereGeomBuffer geomBuffer;
     geomBuffer.m = DirectX::XMMatrixIdentity();
     geomBuffer.size.x = 1.0f;
-    geomBuffer.color = XMFLOAT4{ 1,1,1,1 };
+    geomBuffer.color = XMFLOAT4{1, 1, 0, 1};
 
     D3D11_SUBRESOURCE_DATA data;
     data.pSysMem = &geomBuffer;
@@ -152,7 +152,7 @@ HRESULT Sphere::CreateGeometryBuffer(ID3D11Device* m_pDevice)
 HRESULT Sphere::UpdateGeomtryBuffer(ID3D11DeviceContext* m_pDeviceContext, SphereGeomBuffer* geomBuffer) 
 {
 
-    m_pDeviceContext->UpdateSubresource(m_pSphereGeomBuffer, 0, nullptr, &geomBuffer, 0, 0);
+    m_pDeviceContext->UpdateSubresource(m_pSphereGeomBuffer, 0, nullptr, geomBuffer, 0, 0);
 
     return E_NOTIMPL;
 }
@@ -161,10 +161,10 @@ HRESULT Sphere::Scale()
 {
     for (auto& ver : sphereVertices)
     {
-        ver *= 2.0f;
+        ver *= 0.05f;
     }
 
-    return E_NOTIMPL;
+    return S_OK;
 }
 
 void Sphere::CleanupSphere()

@@ -23,8 +23,6 @@ struct VSOutput
 VSOutput VS(VSInput vertex)
 {
     VSOutput result;
-
     result.pos = mul(vp, mul(model, float4(vertex.pos, 1.0)));
-
     return result;
 }
