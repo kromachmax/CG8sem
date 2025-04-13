@@ -1,32 +1,35 @@
 #include "Light.h"
 
-cbuffer GeomBuffer : register(b1)
+cbuffer ObjectData : register(b1)
 {
-    float4x4 model;
-    float4 size;
-    float4 color;
+    float4x4 worldMatrix;
+    float4 scaleFactor;
+    float4 tint;
 };
 
-struct VSInput
+struct VertexInput
 {
-    float3 pos : POSITION;
+    float3 position : POSITION;
 };
 
-struct VSOutput
+struct PixelInput
 {
-    float4 pos : SV_Position;
-    float3 localPos : POSITION1;
+    float4 screenPos : SV_Position;
+    float3 objectSpacePos : TEXCOORD0;
 };
 
-VSOutput VS(VSInput vertex)
+PixelInput VS(VertexInput input)
 {
-    VSOutput result;
+    PixelInput output;
+    
+    float3 transformedPos = cameraPos.xyz + input.position * scaleFactor.x;
+    
+    output.screenPos = mul(worldMatrix, float4(transformedPos, 1.0));
+    output.screenPos = mul(vp, output.screenPos);
+    
+    output.screenPos.z = output.screenPos.w;
+    
+    output.objectSpacePos = input.position;
 
-    float3 pos = cameraPos.xyz + vertex.pos * size.x;
-
-    result.pos = mul(vp, mul(model, float4(pos, 1.0)));
-    result.pos.z = result.pos.w;
-    result.localPos = vertex.pos;
-
-    return result;
+    return output;
 }

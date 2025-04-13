@@ -7,7 +7,7 @@ SamplerState colorSampler : register(s0);
 struct VSOutput
 {
     float4 pos : SV_Position;
-    float3 localPos : POSITION1;
+    float3 localPos : TEXCOORD0;
 };
 
 float4 PS(VSOutput pixel) : SV_Target0

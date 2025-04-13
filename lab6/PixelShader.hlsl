@@ -1,38 +1,40 @@
 #include "Light.h"
 
-cbuffer GeomBuffer : register(b1)
+cbuffer MaterialProperties : register(b1)
 {
-    float4x4 model;
-    float4x4 norm;
-    float4 shine; // x - shininess
+    float4x4 worldTransform;
+    float4x4 normalMatrix;
+    float4 glossiness;
 };
 
-Texture2D colorTexture : register(t0);
-Texture2D normalMapTexture : register(t1);
+Texture2D diffuseMap : register(t0);
+Texture2D normalMap : register(t1);
+SamplerState textureSampler : register(s0);
 
-SamplerState colorSampler : register(s0);
-
-struct VSOutput
+struct PixelInput
 {
-    float4 pos : SV_Position;
-    float4 worldPos : POSITION;
-    float3 tang : TANGENT;
-    float3 norm : NORMAL;
-    float2 uv : TEXCOORD;
+    float4 clipPos : SV_Position;
+    float4 globalPos : POSITION;
+    float3 tangentVector : TANGENT;
+    float3 normalVector : NORMAL;
+    float2 texCoords : TEXCOORD;
 };
 
-float4 PS(VSOutput pixel) : SV_Target0
+float4 PS(PixelInput input) : SV_Target0
 {
-    float3 color = colorTexture.Sample(colorSampler, pixel.uv).xyz;
+    float3 baseColor = diffuseMap.Sample(textureSampler, input.texCoords).rgb;
 
-    float3 normal = float3(0, 0, 0);
-    
-    float3 binorm = normalize(cross(pixel.norm, pixel.tang));
-    float3 localNorm = normalMapTexture.Sample(colorSampler, pixel.uv).xyz * 2.0 - float3(1.0, 1.0, 1.0);
-    normal = localNorm.x * normalize(pixel.tang) + localNorm.y * binorm + localNorm.z * normalize(pixel.norm);
-    
+    float3 computedNormal = float3(0.0, 0.0, 0.0);
 
-    return float4(CalculateColor(color, normal, pixel.worldPos.xyz, shine.x, false), 1.0);
-    
-    //return float4(lights[0].color.xyz, 1.0);
+    float3 biNormal = normalize(cross(input.normalVector, input.tangentVector));
+
+    float3 sampledNormal = normalMap.Sample(textureSampler, input.texCoords).rgb;
+    float3 adjustedNormal = sampledNormal * 2.0 - 1.0;
+
+    computedNormal = adjustedNormal.x * normalize(input.tangentVector) +
+                     adjustedNormal.y * biNormal +
+                     adjustedNormal.z * normalize(input.normalVector);
+
+    float3 finalColor = CalculateColor(baseColor, computedNormal, input.globalPos.xyz, glossiness.x, false);
+    return float4(finalColor, 1.0);
 }

@@ -370,6 +370,18 @@ void Renderer::CleanupDevice()
         m_pNoTransBlendState = nullptr;
     }
 
+    if (m_pNormalTextureView)
+    {
+        m_pNormalTextureView->Release();
+        m_pNormalTextureView = nullptr;
+    }
+
+    if (m_pNormalTexture)
+    {
+        m_pNormalTexture->Release();
+        m_pNormalTexture = nullptr;
+    }
+
     if (m_pSphere != nullptr)
     {
         m_pSphere->CleanupSphere();
@@ -845,47 +857,60 @@ HRESULT Renderer::InitScene()
     return result;
 }
 
-class D3DInclude : public ID3DInclude
+class CustomShaderIncludeHandler : public ID3DInclude
 {
-    STDMETHOD(Open)(THIS_ D3D_INCLUDE_TYPE IncludeType, LPCSTR pFileName, LPCVOID pParentData, LPCVOID* ppData, UINT* pBytes)
+public:
+    HRESULT __stdcall Open(D3D_INCLUDE_TYPE includeType, LPCSTR fileName, LPCVOID parentData, LPCVOID* dataOutput, UINT* dataSize) override
     {
-        FILE* pFile = nullptr;
-        fopen_s(&pFile, pFileName, "rb");
-        assert(pFile != nullptr);
-        if (pFile == nullptr)
+        FILE* fileHandle = nullptr;
+        errno_t errorCode = fopen_s(&fileHandle, fileName, "rb");
+
+        if (errorCode != 0 || fileHandle == nullptr)
         {
             return E_FAIL;
         }
 
-        fseek(pFile, 0, SEEK_END);
-        long long size = _ftelli64(pFile);
-        fseek(pFile, 0, SEEK_SET);
-
-        VOID* pData = malloc(size);
-        if (pData == nullptr)
+        if (fseek(fileHandle, 0, SEEK_END) != 0)
         {
-            fclose(pFile);
+            fclose(fileHandle);
             return E_FAIL;
         }
 
-        size_t rd = fread(pData, 1, size, pFile);
-        assert(rd == (size_t)size);
-
-        if (rd != (size_t)size)
+        long long fileLength = _ftelli64(fileHandle);
+        if (fseek(fileHandle, 0, SEEK_SET) != 0)
         {
-            fclose(pFile);
-            free(pData);
+            fclose(fileHandle);
             return E_FAIL;
         }
 
-        *ppData = pData;
-        *pBytes = (UINT)size;
+        void* allocatedMemory = malloc(fileLength);
+        if (!allocatedMemory)
+        {
+            fclose(fileHandle);
+            return E_FAIL;
+        }
+
+        size_t bytesRead = fread(allocatedMemory, 1, fileLength, fileHandle);
+        fclose(fileHandle);
+
+        if (bytesRead != static_cast<size_t>(fileLength))
+        {
+            free(allocatedMemory);
+            return E_FAIL;
+        }
+
+        *dataOutput = allocatedMemory;
+        *dataSize = static_cast<UINT>(fileLength);
 
         return S_OK;
     }
-    STDMETHOD(Close)(THIS_ LPCVOID pData)
+
+    HRESULT __stdcall Close(LPCVOID dataToRelease) override
     {
-        free(const_cast<void*>(pData));
+        if (dataToRelease)
+        {
+            free(const_cast<void*>(dataToRelease));
+        }
         return S_OK;
     }
 };
@@ -947,7 +972,7 @@ HRESULT Renderer::CreateShader(const std::wstring& path, ShaderType shaderType, 
 #endif
 
 
-    D3DInclude includeHandler;
+    CustomShaderIncludeHandler includeHandler;
 
     ID3DBlob* pCode     = nullptr;
     ID3DBlob* pErrMsg   = nullptr;
