@@ -553,7 +553,7 @@ bool Renderer::Update()
     m = DirectX::XMMatrixInverse(nullptr, m);
     m = DirectX::XMMatrixTranspose(m);
     geomBuffer.normalMatrix = m;
-    geomBuffer.shine.x = 0.0f;
+    geomBuffer.shine.x = 30.0f;
 
     m_pDeviceContext->UpdateSubresource(m_pGeomBuffer, 0, nullptr, &geomBuffer, 0, 0);
 
@@ -564,7 +564,7 @@ bool Renderer::Update()
     m = DirectX::XMMatrixInverse(nullptr, m);
     m = DirectX::XMMatrixTranspose(m);
     geomBuffer.normalMatrix = m;
-    geomBuffer.shine.x = 0.0f;
+    geomBuffer.shine.x = 10.0f;
 
     m_pDeviceContext->UpdateSubresource(m_pGeomBuffer2, 0, nullptr, &geomBuffer, 0, 0);
 
@@ -2064,13 +2064,14 @@ void Renderer::OnMouseMove(WPARAM btnState, int x, int y)
             rightZ /= rightLen;
         }
 
-        float moveSpeed = 1.0f;
+        float moveSpeed = 2.0f;
+
         m_pScene->lights[0].pos.x += rightX * dx * moveSpeed;
         m_pScene->lights[0].pos.y += rightY * dx * moveSpeed;
         m_pScene->lights[0].pos.z += rightZ * dx * moveSpeed;
-        m_pScene->lights[0].pos.x -= upX * dy * moveSpeed;
-        m_pScene->lights[0].pos.y -= upY * dy * moveSpeed;
-        m_pScene->lights[0].pos.z -= upZ * dy * moveSpeed;
+        m_pScene->lights[0].pos.x += upX * (-dy) * moveSpeed;
+        m_pScene->lights[0].pos.y += upY * (-dy) * moveSpeed;
+        m_pScene->lights[0].pos.z += upZ * (-dy) * moveSpeed;
 
         m_lastMousePos.x = x;
         m_lastMousePos.y = y;
