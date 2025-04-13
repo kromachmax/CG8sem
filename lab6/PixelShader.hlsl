@@ -1,3 +1,5 @@
+#include "Light.h"
+
 Texture2D colorTexture : register(t0);
 
 SamplerState colorSampler : register(s0);

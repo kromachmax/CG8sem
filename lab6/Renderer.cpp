@@ -483,7 +483,7 @@ bool Renderer::Render()
 
     ID3D11Buffer* vertexBuffers[] = { m_pVertexBuffer };
 
-    UINT strides[] = { 20 };
+    UINT strides[] = { 44 };
     UINT offsets[] = { 0 };
 
     ID3D11Buffer* cbuffers[] = { m_pSceneBuffer, m_pGeomBuffer };
@@ -498,6 +498,7 @@ bool Renderer::Render()
 
     ID3D11Buffer* cbuffers2[] = { m_pGeomBuffer2 };
     m_pDeviceContext->VSSetConstantBuffers(1, 1, cbuffers2);
+    m_pDeviceContext->PSSetConstantBuffers(1, 1, cbuffers2);
     m_pDeviceContext->DrawIndexed(36, 0, 0);
 
     for (int i = 0; i < m_pScene->lightCount.x; i++)
@@ -505,7 +506,7 @@ bool Renderer::Render()
         RenderLights(i);
     }
 
-    //RenderSphere();
+    RenderSphere();
 
     RenderRectangles();
 
@@ -536,11 +537,21 @@ bool Renderer::Update()
 
     geomBuffer.m = m;
 
+    m = DirectX::XMMatrixInverse(nullptr, m);
+    m = DirectX::XMMatrixTranspose(m);
+    geomBuffer.normalMatrix = m;
+    geomBuffer.shine.x = 0.0f;
+
     m_pDeviceContext->UpdateSubresource(m_pGeomBuffer, 0, nullptr, &geomBuffer, 0, 0);
 
     m = DirectX::XMMatrixTranslation(2.0f, 0.0f, 0.0f);
 
     geomBuffer.m = m;
+
+    m = DirectX::XMMatrixInverse(nullptr, m);
+    m = DirectX::XMMatrixTranspose(m);
+    geomBuffer.normalMatrix = m;
+    geomBuffer.shine.x = 0.0f;
 
     m_pDeviceContext->UpdateSubresource(m_pGeomBuffer2, 0, nullptr, &geomBuffer, 0, 0);
 
@@ -819,6 +830,51 @@ HRESULT Renderer::InitScene()
     return result;
 }
 
+class D3DInclude : public ID3DInclude
+{
+    STDMETHOD(Open)(THIS_ D3D_INCLUDE_TYPE IncludeType, LPCSTR pFileName, LPCVOID pParentData, LPCVOID* ppData, UINT* pBytes)
+    {
+        FILE* pFile = nullptr;
+        fopen_s(&pFile, pFileName, "rb");
+        assert(pFile != nullptr);
+        if (pFile == nullptr)
+        {
+            return E_FAIL;
+        }
+
+        fseek(pFile, 0, SEEK_END);
+        long long size = _ftelli64(pFile);
+        fseek(pFile, 0, SEEK_SET);
+
+        VOID* pData = malloc(size);
+        if (pData == nullptr)
+        {
+            fclose(pFile);
+            return E_FAIL;
+        }
+
+        size_t rd = fread(pData, 1, size, pFile);
+        assert(rd == (size_t)size);
+
+        if (rd != (size_t)size)
+        {
+            fclose(pFile);
+            free(pData);
+            return E_FAIL;
+        }
+
+        *ppData = pData;
+        *pBytes = (UINT)size;
+
+        return S_OK;
+    }
+    STDMETHOD(Close)(THIS_ LPCVOID pData)
+    {
+        free(const_cast<void*>(pData));
+        return S_OK;
+    }
+};
+
 
 HRESULT Renderer::CreateShader(const std::wstring& path, ShaderType shaderType, ID3D11DeviceChild** ppShader, ID3DBlob** ppCode)
 {
@@ -876,12 +932,13 @@ HRESULT Renderer::CreateShader(const std::wstring& path, ShaderType shaderType, 
 #endif
 
 
+    D3DInclude includeHandler;
+
     ID3DBlob* pCode     = nullptr;
     ID3DBlob* pErrMsg   = nullptr;
     HRESULT result      = D3DCompile(data.data(), data.size(), nullptr,
-                                     nullptr, nullptr, entryPoint.c_str(), platform.c_str(),
+                                     nullptr, &includeHandler, entryPoint.c_str(), platform.c_str(),
                                      flags1, 0, &pCode, &pErrMsg);
-
 
 
     if (!SUCCEEDED(result) && pErrMsg != nullptr)
@@ -1034,37 +1091,39 @@ HRESULT Renderer::CreateVertexBuffer()
 {
     HRESULT result;
 
-    static const TextureVertex Vertices[24] = {
+    static const TextureNormalVertex Vertices[24] = {
 
-        {-0.5, -0.5,  0.5, 0, 1},
-        { 0.5, -0.5,  0.5, 1, 1},
-        { 0.5, -0.5, -0.5, 1, 0},
-        {-0.5, -0.5, -0.5, 0, 0},
+       {XMFLOAT3{-0.5, -0.5,  0.5}, XMFLOAT3{1, 0, 0}, XMFLOAT3{0, -1, 0}, 0, 1},
+       {XMFLOAT3{ 0.5, -0.5,  0.5}, XMFLOAT3{1, 0, 0}, XMFLOAT3{0, -1, 0}, 1, 1},
+       {XMFLOAT3{ 0.5, -0.5, -0.5}, XMFLOAT3{1, 0, 0}, XMFLOAT3{0, -1, 0}, 1, 0},
+       {XMFLOAT3{-0.5, -0.5, -0.5}, XMFLOAT3{1, 0, 0}, XMFLOAT3{0, -1, 0}, 0, 0},
+       
 
-        {-0.5,  0.5, -0.5, 0, 1},
-        { 0.5,  0.5, -0.5, 1, 1},
-        { 0.5,  0.5,  0.5, 1, 0},
-        {-0.5,  0.5,  0.5, 0, 0},
+       {XMFLOAT3{-0.5,  0.5, -0.5}, XMFLOAT3{1, 0, 0}, XMFLOAT3{0, 1, 0}, 0, 1},
+       {XMFLOAT3{-0.5,  0.5, -0.5}, XMFLOAT3{1, 0, 0}, XMFLOAT3{0, 1, 0}, 1, 1},
+       {XMFLOAT3{ 0.5,  0.5,  0.5}, XMFLOAT3{1, 0, 0}, XMFLOAT3{0, 1, 0}, 1, 0},
+       {XMFLOAT3{-0.5,  0.5,  0.5}, XMFLOAT3{1, 0, 0}, XMFLOAT3{0, 1, 0}, 0, 0},
+      
+       {XMFLOAT3{ 0.5, -0.5, -0.5}, XMFLOAT3{0, 0, 1}, XMFLOAT3{1, 0, 0}, 0, 1},
+       {XMFLOAT3{ 0.5, -0.5,  0.5}, XMFLOAT3{0, 0, 1}, XMFLOAT3{1, 0, 0}, 1, 1},
+       {XMFLOAT3{ 0.5,  0.5,  0.5}, XMFLOAT3{0, 0, 1}, XMFLOAT3{1, 0, 0}, 1, 0},
+       {XMFLOAT3{ 0.5,  0.5, -0.5}, XMFLOAT3{0, 0, 1}, XMFLOAT3{1, 0, 0}, 0, 0},
+     
+       {XMFLOAT3{-0.5, -0.5,  0.5}, XMFLOAT3{0, 0, -1}, XMFLOAT3{-1, 0, 0}, 0, 1},
+       {XMFLOAT3{-0.5, -0.5, -0.5}, XMFLOAT3{0, 0, -1}, XMFLOAT3{-1, 0, 0}, 1, 1},
+       {XMFLOAT3{-0.5,  0.5, -0.5}, XMFLOAT3{0, 0, -1}, XMFLOAT3{-1, 0, 0}, 1, 0},
+       {XMFLOAT3{-0.5,  0.5,  0.5}, XMFLOAT3{0, 0, -1}, XMFLOAT3{-1, 0, 0}, 0, 0},
+    
+       {XMFLOAT3{ 0.5, -0.5,  0.5}, XMFLOAT3{-1, 0, 0}, XMFLOAT3{0, 0, 1}, 0, 1},
+       {XMFLOAT3{-0.5, -0.5,  0.5}, XMFLOAT3{-1, 0, 0}, XMFLOAT3{0, 0, 1}, 1, 1},
+       {XMFLOAT3{-0.5,  0.5,  0.5}, XMFLOAT3{-1, 0, 0}, XMFLOAT3{0, 0, 1}, 1, 0},
+       {XMFLOAT3{ 0.5,  0.5,  0.5}, XMFLOAT3{-1, 0, 0}, XMFLOAT3{0, 0, 1}, 0, 0},
+      
+       {XMFLOAT3{-0.5, -0.5, -0.5}, XMFLOAT3{1, 0, 0}, XMFLOAT3{0, 0, -1}, 0, 1},
+       {XMFLOAT3{ 0.5, -0.5, -0.5}, XMFLOAT3{1, 0, 0}, XMFLOAT3{0, 0, -1}, 1, 1},
+       {XMFLOAT3{ 0.5,  0.5, -0.5}, XMFLOAT3{1, 0, 0}, XMFLOAT3{0, 0, -1}, 1, 0},
+       {XMFLOAT3{-0.5,  0.5, -0.5}, XMFLOAT3{1, 0, 0}, XMFLOAT3{0, 0, -1}, 0, 0}
 
-        { 0.5, -0.5, -0.5, 0, 1},
-        { 0.5, -0.5,  0.5, 1, 1},
-        { 0.5,  0.5,  0.5, 1, 0},
-        { 0.5,  0.5, -0.5, 0, 0},
-
-        {-0.5, -0.5,  0.5, 0, 1},
-        {-0.5, -0.5, -0.5, 1, 1},
-        {-0.5,  0.5, -0.5, 1, 0},
-        {-0.5,  0.5,  0.5, 0, 0},
-
-        { 0.5, -0.5,  0.5, 0, 1},
-        {-0.5, -0.5,  0.5, 1, 1},
-        {-0.5,  0.5,  0.5, 1, 0},
-        { 0.5,  0.5,  0.5, 0, 0},
-
-        {-0.5, -0.5, -0.5, 0, 1},
-        { 0.5, -0.5, -0.5, 1, 1},
-        { 0.5,  0.5, -0.5, 1, 0},
-        {-0.5,  0.5, -0.5, 0, 0}
     };
 
     D3D11_BUFFER_DESC desc{};
@@ -1728,6 +1787,8 @@ void Renderer::RenderSphere()
     UINT strides[] = { 12 };
     UINT offsets[] = { 0 };
     ID3D11Buffer* cbuffers[] = { m_pSceneBuffer, m_pSphere->m_pSphereGeomBuffer };
+    ID3D11Buffer* ps_cbuffers[] = { m_pSceneBuffer };
+
 
     m_pDeviceContext->IASetVertexBuffers(0, 1, vertexBuffers, strides, offsets);
     m_pDeviceContext->IASetInputLayout(m_pSphereInputLayout);
@@ -1735,6 +1796,7 @@ void Renderer::RenderSphere()
     m_pDeviceContext->VSSetShader(m_pSphereVertexShader, nullptr, 0);
     m_pDeviceContext->VSSetConstantBuffers(0, 2, cbuffers);
     m_pDeviceContext->PSSetShader(m_pSpherePixelShader, nullptr, 0);
+    m_pDeviceContext->PSSetConstantBuffers(0, 1, ps_cbuffers);
     m_pDeviceContext->DrawIndexed(m_pSphere->m_sphereIndexCount, 0, 0);
 }
 

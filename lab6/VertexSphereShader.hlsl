@@ -1,8 +1,4 @@
-cbuffer SceneBuffer : register(b0)
-{
-    float4x4 vp;
-    float4 cameraPos;
-};
+#include "Light.h"
 
 cbuffer GeomBuffer : register(b1)
 {

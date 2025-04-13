@@ -20,11 +20,6 @@
 #include "Sphere.h"
 #include "Rectangle.h"
 
-struct TextureVertex
-{
-    float x, y, z;
-    float u, v;
-};
 
 enum class ShaderType {
     Vertex,
@@ -34,6 +29,8 @@ enum class ShaderType {
 struct GeomBuffer
 {
     DirectX::XMMATRIX m;
+    DirectX::XMMATRIX normalMatrix;
+    XMFLOAT4 shine;
 };
 
 struct Camera

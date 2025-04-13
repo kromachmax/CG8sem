@@ -85,5 +85,8 @@
     <CopyFileToFolders Include="VertexSphereShader.hlsl" />
     <CopyFileToFolders Include="VertexLightShader.hlsl" />
     <CopyFileToFolders Include="PixelLightShader.hlsl" />
+    <CopyFileToFolders Include="Light.h">
+      <Filter>Файлы заголовков</Filter>
+    </CopyFileToFolders>
   </ItemGroup>
 </Project>

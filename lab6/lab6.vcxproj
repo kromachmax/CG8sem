@@ -144,6 +144,7 @@
     <ClInclude Include="DDS.h" />
     <ClInclude Include="framework.h" />
     <ClInclude Include="lab6.h" />
+    <CopyFileToFolders Include="Light.h" />
     <ClInclude Include="Rectangle.h" />
     <ClInclude Include="Renderer.h" />
     <ClInclude Include="Resource.h" />
